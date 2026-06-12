@@ -114,15 +114,16 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 Every block also carries `Owner: @handle` — the pre-assigned sprint lane from the original plan, i.e. who has taken the task. It's the default assignee, not the lock: the lock is still flipping Status to `in-progress` when you actually start. Picking outside your lane is fine when you're unblocked and it helps the critical path.
 
 ### DR-101 — Arena.sol round lifecycle + suspect registry
-- Status: in-progress @Manjeet 2026-06-13
+- Status: done @Manjeet 2026-06-13
 - Owner: @Manjeet
 - Depends-on: DR-401
 - OS: any
 - Scope: contracts
 - Acceptance: round states `open → locked → revealed`; suspect registry stores `identityCommit = keccak256(isHuman, salt)` per suspect; only the operator can open/lock rounds and register suspects.
+- Notes: ✅ shipped on `main` — `contracts/Arena.sol` (Hardhat, Solidity 0.8.24): lifecycle, registry, `identityCommit = keccak256(abi.encode(isHuman, salt))`, Ownable operator access control. PR #1; 16 tests passing.
 
 ### DR-102 — Staking: placeVerdicts slip
-- Status: in-progress @Manjeet 2026-06-13
+- Status: done @Manjeet 2026-06-13
 - Owner: @Manjeet
 - Depends-on: DR-101
 - OS: any
@@ -136,6 +137,7 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 - OS: any
 - Scope: contracts
 - Acceptance: `reveal(suspectId, isHuman, salt)` verifies against the stored commit; `settle()` computes payouts pro-rata by correct verdicts × confidence multiplier.
+- Notes: ⏳ partial — `reveal()` commit-verification shipped on `main` (`contracts/`, PR #1) with passing happy-path + wrong-salt + flipped-bit tests. `settle()` is a stub that reverts `DR-104: payout model not specified` — the payout half is blocked on the economic spec (parimutuel vs house-banked). Finish when DR-104 unblocks.
 
 ### DR-104 — claim() + house-edge skim
 - Status: pending
@@ -146,12 +148,13 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 - Acceptance: winners pull payouts via `claim()`; a simple house-edge skim accrues to the protocol (story point: protocol revenue).
 
 ### DR-105 — Happy-path test suite
-- Status: in-progress @Manjeet 2026-06-13
+- Status: done @Manjeet 2026-06-13
 - Owner: @Manjeet
-- Depends-on: DR-104
+- Depends-on: DR-101, DR-102
 - OS: any
 - Scope: tests
 - Acceptance: Hardhat or Foundry tests green for the happy path ONLY — commit → stake → reveal → claim. No edge-case rabbit holes before Checkpoint 1.
+- Notes: ✅ shipped on `main` (PR #1) — Hardhat+chai, 16 tests passing: full lifecycle (open→register→stake→lock→reveal) asserting events + escrow, wrong-salt + flipped-bit reveal reverts, and settle/claim stub reverts. (`claim` itself is stubbed — DR-104.) Depends-on corrected from DR-104 (was inverted).
 
 ### DR-106 — Deploy to Mantle Sepolia + verify
 - Status: pending
@@ -206,12 +209,13 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 - Acceptance: applications submitted at kickoff for Z.AI / Nansen / other partner credits — approval takes time, so this fires in hour 0.
 
 ### DR-202 — Trade simulator service
-- Status: in-progress @Prithwish 2026-06-13
+- Status: done @Prithwish 2026-06-13
 - Owner: @Prithwish
 - Depends-on: DR-401
 - OS: any
 - Scope: api, db
 - Acceptance: real price feed (CoinGecko or Bybit ticker) + paper-trade engine; positions tracked per suspect; trade log persisted (Postgres/Supabase, or JSON + websocket if faster). Serves on port **3101** (klink owns 3000). Paper trades only — no DEX calls.
+- Notes: ✅ shipped on `main` — `agents/` Express+ws service on :3101 (PR #2): CoinGecko feed (live-verified BTC/ETH), paper-trade engine emitting the exact frontend `Trade` shape (human/bot parity by construction), JSON trade log. `SUSPECT_COUNT` is a single config constant for the 6-vs-8 decision; feed source swappable (Bybit later).
 
 ### DR-203 — Bot personalities ×4
 - Status: pending
@@ -231,7 +235,7 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 - Acceptance: tiny admin page where 2 humans (`@Jishnu` + one more) place manual paper trades; usable in spare moments all day — real human noise in the feed.
 
 ### DR-205 — Trade stream endpoint
-- Status: in-progress @Prithwish 2026-06-13
+- Status: done @Prithwish 2026-06-13
 - Owner: @Prithwish
 - Depends-on: DR-202
 - OS: any
@@ -276,13 +280,13 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 > Lead: `@Mouli`. Use the master UI prompt: dark evidence-room palette, mono for data, zero gradients.
 
 ### DR-301 — Scaffold web app
-- Status: in-progress @Mouli 2026-06-12
+- Status: done @Mouli 2026-06-13
 - Owner: @Mouli
 - Depends-on: DR-401
 - OS: any
 - Scope: web, setup
 - Acceptance: Next.js + Tailwind + Framer Motion + wagmi/viem scaffolded under `/web` with Mantle Sepolia chain config (chainId 5003); dev server pinned to port **3100** (klink owns 3000/3030).
-- Notes: merged to `main` under `web/` (DR-401) — Next 16 / React 19 / Tailwind 4 / Framer Motion + GSAP + Lenis. Scaffold itself is done; this task stays open for the chain wiring still missing: wagmi/viem, Mantle Sepolia (5003) config, and pinning `next dev` to port 3100 ("Mantle" currently appears in copy text only).
+- Notes: ✅ shipped on `main` (PR #3) — real wagmi/viem wallet on Mantle Sepolia (5003): `web/src/lib/wagmi.ts`, a Next-16 `'use client'` `Providers` wrapper, `store.tsx` rewired to wagmi hooks with the `WalletState` shape preserved, dev port pinned to 3100. `tsc --noEmit` clean. (Mantle chain defined inline — viem's installed version lacked the export.) Base scaffold came in via the `web/` merge (DR-401).
 
 ### DR-302 — Design tokens
 - Status: in-progress @Mouli 2026-06-12
@@ -512,7 +516,7 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 > Lead: `@Jishnu` (deck: `@Mouli`). The story is the product on judging day.
 
 ### DR-501 — Lock the demo script FIRST
-- Status: in-progress @Jishnu 2026-06-13
+- Status: done @Jishnu 2026-06-13
 - Owner: all hands
 - Depends-on: —
 - OS: any
@@ -529,7 +533,7 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 - Notes: ⚠️ the frontend mock (DR-303) currently ships **8 suspects (4 bots / 4 humans)** — either ratify 8/4/4 by editing this task or fix the mock to 6/4/2. Contracts + bots must match whatever is ratified.
 
 ### DR-503 — Demo storyboard
-- Status: in-progress @Jishnu 2026-06-13
+- Status: done @Jishnu 2026-06-13
 - Owner: @Jishnu
 - Depends-on: DR-501
 - OS: any
@@ -600,7 +604,14 @@ Prep during the buffer hour, use on stage: put two live trade feeds on screen. A
 
 ## Done
 
-_(empty — move completed blocks here, newest first)_
+_Done this sprint (blocks flipped in place, newest first):_
+
+- **DR-503 / DR-501** @Jishnu — demo script + storyboard (`docs/`, PR #4)
+- **DR-301** @Mouli — real wagmi wallet on Mantle Sepolia (`web/`, PR #3)
+- **DR-205 / DR-202** @Prithwish — trade simulator + feed + websocket stream (`agents/`, PR #2)
+- **DR-105 / DR-102 / DR-101** @Manjeet — Arena commit-reveal contracts + 16 tests (`contracts/`, PR #1)
+
+_Bookkeeping: during the sprint, completed blocks are flipped to `done` in place (not physically relocated) so section + owner structure stays stable; a closing sweep can relocate them. DR-103 stays in-progress — reveal shipped, settle blocked on DR-104._
 
 ## Blocked
 
