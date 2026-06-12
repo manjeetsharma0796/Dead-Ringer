@@ -63,7 +63,7 @@ This is a 24-hour sprint, so klink's 5-day rule compresses: if a task is `in-pro
 | `@Prithwish` | Backend + agents (DR-2xx) | any | IST |
 | `@Jishnu` | Production build — integration, environments, demo & submission (DR-4xx, DR-5xx) | any | IST |
 
-Section leads are defaults, not fences — anyone unblocked picks the highest-leverage pending task.
+Section leads are defaults, not fences — every task names its taker on an `Owner:` line, but anyone unblocked picks the highest-leverage pending task.
 
 ## Active claims
 
@@ -110,8 +110,11 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 - `blocked — <reason>` — stuck
 - `done @handle YYYY-MM-DD` — completed; move block to Done
 
+Every block also carries `Owner: @handle` — the pre-assigned sprint lane from the original plan, i.e. who has taken the task. It's the default assignee, not the lock: the lock is still flipping Status to `in-progress` when you actually start. Picking outside your lane is fine when you're unblocked and it helps the critical path.
+
 ### DR-101 — Arena.sol round lifecycle + suspect registry
 - Status: pending
+- Owner: @Manjeet
 - Depends-on: DR-401
 - OS: any
 - Scope: contracts
@@ -119,6 +122,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-102 — Staking: placeVerdicts slip
 - Status: pending
+- Owner: @Manjeet
 - Depends-on: DR-101
 - OS: any
 - Scope: contracts
@@ -126,6 +130,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-103 — Reveal + settle
 - Status: pending
+- Owner: @Manjeet
 - Depends-on: DR-101
 - OS: any
 - Scope: contracts
@@ -133,6 +138,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-104 — claim() + house-edge skim
 - Status: pending
+- Owner: @Manjeet
 - Depends-on: DR-102, DR-103
 - OS: any
 - Scope: contracts
@@ -140,6 +146,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-105 — Happy-path test suite
 - Status: pending
+- Owner: @Manjeet
 - Depends-on: DR-104
 - OS: any
 - Scope: tests
@@ -147,6 +154,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-106 — Deploy to Mantle Sepolia + verify
 - Status: pending
+- Owner: @Manjeet
 - Depends-on: DR-105, DR-402
 - OS: any
 - Scope: deploy
@@ -154,6 +162,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-107 — Crowd-sentiment view function
 - Status: pending
+- Owner: @Manjeet
 - Depends-on: DR-102
 - OS: any
 - Scope: contracts
@@ -161,6 +170,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-108 — Settlement edge cases
 - Status: pending
+- Owner: @Manjeet
 - Depends-on: DR-103
 - OS: any
 - Scope: contracts
@@ -168,6 +178,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-109 — Scripted round-runner
 - Status: pending
+- Owner: @Manjeet
 - Depends-on: DR-106
 - OS: any
 - Scope: ops
@@ -175,6 +186,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-110 — Explorer polish + NatSpec
 - Status: pending
+- Owner: @Manjeet
 - Depends-on: DR-106
 - OS: any
 - Scope: contracts, docs
@@ -186,6 +198,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-201 — Claim hackathon computing credits
 - Status: pending
+- Owner: @Prithwish
 - Depends-on: —
 - OS: any
 - Scope: ops
@@ -193,6 +206,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-202 — Trade simulator service
 - Status: pending
+- Owner: @Prithwish
 - Depends-on: DR-401
 - OS: any
 - Scope: api, db
@@ -200,6 +214,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-203 — Bot personalities ×4
 - Status: pending
+- Owner: @Prithwish
 - Depends-on: DR-202, DR-201
 - OS: any
 - Scope: agents
@@ -208,6 +223,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-204 — Human trader slots + admin page
 - Status: pending
+- Owner: @Prithwish
 - Depends-on: DR-202
 - OS: any
 - Scope: agents, web
@@ -215,6 +231,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-205 — Trade stream endpoint
 - Status: pending
+- Owner: @Prithwish
 - Depends-on: DR-202
 - OS: any
 - Scope: api
@@ -222,6 +239,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-206 — Bots running continuously
 - Status: pending
+- Owner: @Prithwish
 - Depends-on: DR-203
 - OS: any
 - Scope: agents
@@ -229,6 +247,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-207 — Behavioral tells per suspect
 - Status: pending
+- Owner: @Prithwish
 - Depends-on: DR-202
 - OS: any
 - Scope: api
@@ -236,6 +255,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-208 — Landing page content pass
 - Status: pending
+- Owner: @Prithwish
 - Depends-on: DR-501
 - OS: any
 - Scope: web, docs
@@ -244,6 +264,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-209 — Seed the juicy demo round
 - Status: pending
+- Owner: @Prithwish
 - Depends-on: DR-206
 - OS: any
 - Scope: agents, ops
@@ -255,6 +276,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-301 — Scaffold web app
 - Status: in-progress @Mouli 2026-06-12
+- Owner: @Mouli
 - Depends-on: DR-401
 - OS: any
 - Scope: web, setup
@@ -263,6 +285,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-302 — Design tokens
 - Status: in-progress @Mouli 2026-06-12
+- Owner: @Mouli
 - Depends-on: DR-301
 - OS: any
 - Scope: design
@@ -271,6 +294,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-303 — Mock data layer
 - Status: in-progress @Mouli 2026-06-12
+- Owner: @Mouli
 - Depends-on: DR-301
 - OS: any
 - Scope: web
@@ -279,6 +303,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-304 — Dossier card (the hero component)
 - Status: in-progress @Mouli 2026-06-12
+- Owner: @Mouli
 - Depends-on: DR-302, DR-303
 - OS: any
 - Scope: web, design
@@ -287,6 +312,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-305 — Arena page
 - Status: in-progress @Mouli 2026-06-12
+- Owner: @Mouli
 - Depends-on: DR-304
 - OS: any
 - Scope: web
@@ -295,6 +321,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-306 — Guess slip
 - Status: in-progress @Mouli 2026-06-12
+- Owner: @Mouli
 - Depends-on: DR-304
 - OS: any
 - Scope: web
@@ -303,6 +330,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-307 — Suspect detail drawer
 - Status: in-progress @Mouli 2026-06-12
+- Owner: @Mouli
 - Depends-on: DR-305
 - OS: any
 - Scope: web
@@ -311,6 +339,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-308 — Reveal ceremony page
 - Status: in-progress @Mouli 2026-06-12
+- Owner: @Mouli
 - Depends-on: DR-304
 - OS: any
 - Scope: web, design
@@ -319,6 +348,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-309 — Share-card generator
 - Status: pending
+- Owner: @Mouli
 - Depends-on: DR-308
 - OS: any
 - Scope: web
@@ -327,6 +357,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-310 — Swap mocks → real feed + contracts
 - Status: pending
+- Owner: @Mouli
 - Depends-on: DR-306, DR-205, DR-106
 - OS: any
 - Scope: web, api
@@ -334,6 +365,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-311 — Leaderboard page
 - Status: in-progress @Mouli 2026-06-12
+- Owner: @Mouli
 - Depends-on: DR-207, DR-310
 - OS: any
 - Scope: web
@@ -342,6 +374,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-312 — Mobile pass on demo-critical screens
 - Status: pending
+- Owner: @Mouli
 - Depends-on: DR-310, DR-308
 - OS: any
 - Scope: web
@@ -349,6 +382,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-313 — Loading/empty/error states
 - Status: pending
+- Owner: @Mouli
 - Depends-on: DR-410
 - OS: any
 - Scope: web
@@ -357,6 +391,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-314 — Landing page final polish
 - Status: pending
+- Owner: @Mouli
 - Depends-on: DR-208, DR-410
 - OS: any
 - Scope: web, design
@@ -368,6 +403,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-401 — Repo setup
 - Status: pending
+- Owner: @Jishnu
 - Depends-on: —
 - OS: any
 - Scope: setup
@@ -376,6 +412,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-402 — Chain ops: wallets, faucet, RPC
 - Status: pending
+- Owner: @Jishnu
 - Depends-on: —
 - OS: any
 - Scope: ops
@@ -383,6 +420,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-403 — CI + environments
 - Status: pending
+- Owner: @Jishnu
 - Depends-on: DR-401
 - OS: any
 - Scope: infra
@@ -390,6 +428,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-404 — Freeze the integration contract
 - Status: pending
+- Owner: @Jishnu
 - Depends-on: DR-401
 - OS: any
 - Scope: infra, api
@@ -397,6 +436,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-405 — Human paper-trading ops
 - Status: pending
+- Owner: @Jishnu
 - Depends-on: DR-204
 - OS: any
 - Scope: ops
@@ -404,6 +444,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-406 — CHECKPOINT 1 (hours 6–7, all hands, 30 min max)
 - Status: pending
+- Owner: all hands
 - Depends-on: DR-104, DR-205, DR-305, DR-404
 - OS: any
 - Scope: ops
@@ -411,6 +452,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-407 — Staging deploys
 - Status: pending
+- Owner: @Jishnu
 - Depends-on: DR-403, DR-106
 - OS: any
 - Scope: infra
@@ -418,6 +460,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-408 — Integration test script
 - Status: pending
+- Owner: @Jishnu
 - Depends-on: DR-404
 - OS: any
 - Scope: ops, docs
@@ -425,6 +468,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-409 — Full dry run on testnet
 - Status: pending
+- Owner: @Jishnu
 - Depends-on: DR-310, DR-109, DR-407, DR-408
 - OS: any
 - Scope: ops
@@ -432,6 +476,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-410 — CHECKPOINT 2 — FEATURE FREEZE (hours 16–17)
 - Status: pending
+- Owner: all hands
 - Depends-on: DR-409
 - OS: any
 - Scope: ops
@@ -439,6 +484,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-411 — One REAL round with outsiders
 - Status: pending
+- Owner: @Jishnu
 - Depends-on: DR-409
 - OS: any
 - Scope: ops
@@ -446,6 +492,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-412 — Production deploy + stage backup
 - Status: pending
+- Owner: @Jishnu
 - Depends-on: DR-410
 - OS: any
 - Scope: infra
@@ -453,6 +500,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-413 — Telegram integration setup
 - Status: pending
+- Owner: @Jishnu
 - Depends-on: —
 - OS: any
 - Scope: infra
@@ -464,6 +512,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-501 — Lock the demo script FIRST
 - Status: pending
+- Owner: all hands
 - Depends-on: —
 - OS: any
 - Scope: docs
@@ -471,6 +520,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-502 — Final round parameters
 - Status: pending
+- Owner: all hands
 - Depends-on: —
 - OS: any
 - Scope: decision
@@ -479,6 +529,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-503 — Demo storyboard
 - Status: pending
+- Owner: @Jishnu
 - Depends-on: DR-501
 - OS: any
 - Scope: docs
@@ -486,6 +537,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-504 — 3-minute demo video
 - Status: pending
+- Owner: @Jishnu
 - Depends-on: DR-409, DR-503
 - OS: any
 - Scope: demo
@@ -493,6 +545,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-505 — Submission-grade README
 - Status: pending
+- Owner: @Jishnu, @Manjeet
 - Depends-on: DR-106
 - OS: any
 - Scope: docs
@@ -500,6 +553,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-506 — Pitch deck
 - Status: pending
+- Owner: @Mouli
 - Depends-on: DR-501
 - OS: any
 - Scope: docs, design
@@ -508,6 +562,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-507 — Submit: DoraHacks + X thread
 - Status: pending
+- Owner: @Jishnu
 - Depends-on: DR-504, DR-505, DR-106
 - OS: any
 - Scope: submission
@@ -516,6 +571,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 
 ### DR-508 — Live-demo rehearsals ×2
 - Status: pending
+- Owner: all hands (@Jishnu drives)
 - Depends-on: DR-409, DR-504
 - OS: any
 - Scope: demo
