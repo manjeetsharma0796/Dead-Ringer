@@ -12,6 +12,7 @@ import type { TradeEngine } from "../engine/index.js";
 import type { FeedManager } from "../feed/index.js";
 import { SUSPECT_IDS } from "../config.js";
 import type { TradeRequest } from "../types.js";
+import { computeSuspectStats } from "../engine/stats.js";
 
 export function buildRouter(engine: TradeEngine, feed: FeedManager): Router {
   const router = Router();
@@ -44,29 +45,14 @@ export function buildRouter(engine: TradeEngine, feed: FeedManager): Router {
   });
 
   // ── GET /suspects ─────────────────────────────────────────────────────────
+  // Per-suspect behavioral tells (DR-207), computed in engine/stats.ts as pure
+  // functions over the trade log. Stable regardless of bot tuning or the
+  // economic model — a tell is a measurement. Fills the frontend SuspectStats.
   router.get("/suspects", (_req: Request, res: Response) => {
-    const suspects = SUSPECT_IDS.map((id) => {
-      const trades = engine.tradesFor(id);
-      const tradeCount = trades.length;
-
-      // ── DR-207 TODO: real computed tells ──────────────────────────────────
-      // winRate is a placeholder; replace with:
-      //   (trades where pnl > 0).length / trades.filter(t => t.pnl !== 0).length
-      // Other tells: avgHoldTime, activeHours, panicSellCount (DR-207).
-      const closedTrades = trades.filter((t) => t.pnl !== 0);
-      const wins = closedTrades.filter((t) => t.pnl > 0).length;
-      const winRate =
-        closedTrades.length > 0
-          ? Math.round((wins / closedTrades.length) * 100) / 100
-          : null;
-
-      return {
-        suspectId: id,
-        tradeCount,
-        winRate, // null until at least one position is closed
-      };
-    });
-
+    const suspects = SUSPECT_IDS.map((id) => ({
+      suspectId: id,
+      ...computeSuspectStats(engine.tradesFor(id)),
+    }));
     res.json(suspects);
   });
 
