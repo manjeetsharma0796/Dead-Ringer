@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Bebas_Neue, IBM_Plex_Mono } from "next/font/google";
-import { StoreProvider } from "@/lib/store";
+import { Providers } from "@/components/Providers";
 import { Toasts } from "@/components/ui/Toasts";
 import "./globals.css";
 
@@ -35,10 +35,10 @@ export default function RootLayout({
       className={`${plexMono.variable} ${bebas.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-bg text-ink">
-        <StoreProvider>
+        <Providers>
           {children}
           <Toasts />
-        </StoreProvider>
+        </Providers>
       </body>
     </html>
   );
