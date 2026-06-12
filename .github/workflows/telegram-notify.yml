@@ -34,6 +34,7 @@ jobs:
           USER: ${{ github.event.pull_request.user.login }}
           URL: ${{ github.event.pull_request.html_url }}
         run: |
+          if [ -z "$BOT" ] || [ -z "$CHAT" ]; then echo "Telegram secrets not set — skipping (see DR-413)"; exit 0; fi
           case "$TITLE" in
             claim:*)    TAG="[DR/CLAIM]" ;;
             unclaim:*)  TAG="[DR/UNCLAIM]" ;;
@@ -70,6 +71,7 @@ jobs:
           USER: ${{ github.event.pull_request.user.login }}
           URL: ${{ github.event.pull_request.html_url }}
         run: |
+          if [ -z "$BOT" ] || [ -z "$CHAT" ]; then echo "Telegram secrets not set — skipping (see DR-413)"; exit 0; fi
           TEXT=$(printf '[DR/CONFLICT] *%s* needs human intervention: `%s`\n%s' "$USER" "$TITLE" "$URL")
           curl -sS -X POST "https://api.telegram.org/bot${BOT}/sendMessage" \
             --data-urlencode "chat_id=${CHAT}" \
@@ -85,6 +87,7 @@ jobs:
           USER: ${{ github.event.pull_request.user.login }}
           URL: ${{ github.event.pull_request.html_url }}
         run: |
+          if [ -z "$BOT" ] || [ -z "$CHAT" ]; then echo "Telegram secrets not set — skipping (see DR-413)"; exit 0; fi
           case "$TITLE" in
             claim:*)    TAG="[DR/LOCK]" ;;
             unclaim:*)  TAG="[DR/FREED]" ;;
@@ -107,6 +110,7 @@ jobs:
           USER: ${{ github.event.head_commit.author.name }}
           URL: ${{ github.event.head_commit.url }}
         run: |
+          if [ -z "$BOT" ] || [ -z "$CHAT" ]; then echo "Telegram secrets not set — skipping (see DR-413)"; exit 0; fi
           # Skip merge commits and squash-merged PR commits — already covered by the PR-merged step
           if [[ "$MSG" =~ ^Merge[[:space:]]pull[[:space:]]request ]] || [[ "$MSG" =~ \(#[0-9]+\) ]]; then
             exit 0
