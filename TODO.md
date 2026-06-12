@@ -251,12 +251,13 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 - Acceptance: bots wired to the live simulator and left running from phase 2 onward — judges love a feed with real history depth.
 
 ### DR-207 — Behavioral tells per suspect
-- Status: pending
+- Status: done @Prithwish 2026-06-13
 - Owner: @Prithwish
 - Depends-on: DR-202
 - OS: any
 - Scope: api
 - Acceptance: per-suspect computed tells served to the UI — avg hold time, active hours, panic-sell count.
+- Notes: ✅ shipped on `main` (PR #5) — `agents/src/engine/stats.ts` pure functions over the trade log fill the frontend `SuspectStats` (winRate, avgHoldMin via open→close pairing, maxDrawdown, volatility) + extra tells (activeHours, panicSellCount), served on `GET /suspects`. No engine change — derived from the frozen Trade log, so it won't churn with bot tuning or the economic model. 6 `node:test` unit tests pass.
 
 ### DR-208 — Landing page content pass
 - Status: pending
@@ -407,13 +408,13 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 > Lead: `@Jishnu`. Integration, environments, checkpoints — the glue that makes the loop bulletproof.
 
 ### DR-401 — Repo setup
-- Status: pending
+- Status: done @Jishnu 2026-06-13
 - Owner: @Jishnu
 - Depends-on: —
 - OS: any
 - Scope: setup
 - Acceptance: monorepo layout `/contracts`, `/web`, `/agents`; README skeleton with the one-liner.
-- Notes: ✅ resolved 2026-06-13 — the orphan `frontend` branch (Next.js app at its root, no merge base) was subtree-merged under `web/`, preserving @Mouli's history without disturbing root `README`/`TODO`. `web/ui-inspo/` is a scratch dir that rode along — delete when convenient. Remaining: add `/contracts` and `/agents` siblings when DR-101 / DR-202 land.
+- Notes: ✅ resolved 2026-06-13 — the orphan `frontend` branch (Next.js app at its root, no merge base) was subtree-merged under `web/`, preserving @Mouli's history without disturbing root `README`/`TODO`. `web/ui-inspo/` is a scratch dir that rode along — delete when convenient. Now complete: `/contracts` + `/agents` landed (PRs #1–#2) and a root README documents all four packages (PR #6).
 
 ### DR-402 — Chain ops: wallets, faucet, RPC
 - Status: pending
@@ -606,6 +607,8 @@ Prep during the buffer hour, use on stage: put two live trade feeds on screen. A
 
 _Done this sprint (blocks flipped in place, newest first):_
 
+- **DR-401** @Jishnu — root README: monorepo architecture + run instructions (PR #6)
+- **DR-207** @Prithwish — behavioral tells, pure stats over the trade log (`agents/`, PR #5)
 - **DR-503 / DR-501** @Jishnu — demo script + storyboard (`docs/`, PR #4)
 - **DR-301** @Mouli — real wagmi wallet on Mantle Sepolia (`web/`, PR #3)
 - **DR-205 / DR-202** @Prithwish — trade simulator + feed + websocket stream (`agents/`, PR #2)
