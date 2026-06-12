@@ -1,0 +1,119 @@
+name: Telegram notify
+
+# Ported from klink's telegram-notify.yml (DR-413), adapted for the Dead Ringer board:
+# task IDs are DR-XXX and every message is tagged [DR/...] so notifications are
+# unmistakable even if they land in a chat shared with klink's bot.
+# klink's leaderboard job is intentionally NOT ported (depends on its bun script).
+#
+# Required repo secrets: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID — point CHAT_ID at a
+# Dead Ringer chat/topic, NOT the klink-dev group (see TODO.md collision rules).
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review, closed]
+  push:
+    branches: [main]
+
+# Repo default GITHUB_TOKEN permissions are restricted, so actions/github-script
+# below 403s on `pulls.get()` without an explicit grant. Read-only is enough —
+# the workflow only reads the PR's mergeable_state and posts to Telegram.
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: PR opened
+        if: github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'reopened')
+        env:
+          BOT: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TITLE: ${{ github.event.pull_request.title }}
+          USER: ${{ github.event.pull_request.user.login }}
+          URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          case "$TITLE" in
+            claim:*)    TAG="[DR/CLAIM]" ;;
+            unclaim:*)  TAG="[DR/UNCLAIM]" ;;
+            override:*) TAG="[DR/OVERRIDE]" ;;
+            DR-*)       TAG="[DR/REVIEW]" ;;
+            *)          TAG="[DR/PR]" ;;
+          esac
+          TEXT=$(printf '%s opened: `%s`\n%s' "${TAG} *${USER}*" "$TITLE" "$URL")
+          curl -sS -X POST "https://api.telegram.org/bot${BOT}/sendMessage" \
+            --data-urlencode "chat_id=${CHAT}" \
+            --data-urlencode "parse_mode=Markdown" \
+            --data-urlencode "text=${TEXT}"
+
+      - name: Fetch PR mergeable state
+        if: github.event_name == 'pull_request' && github.event.action != 'closed'
+        id: pr_mergeable
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+            });
+            core.setOutput('mergeable_state', pr.mergeable_state || 'unknown');
+
+      - name: PR conflicts
+        if: github.event_name == 'pull_request' && github.event.action != 'closed' && steps.pr_mergeable.outputs.mergeable_state == 'dirty'
+        env:
+          BOT: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TITLE: ${{ github.event.pull_request.title }}
+          USER: ${{ github.event.pull_request.user.login }}
+          URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          TEXT=$(printf '[DR/CONFLICT] *%s* needs human intervention: `%s`\n%s' "$USER" "$TITLE" "$URL")
+          curl -sS -X POST "https://api.telegram.org/bot${BOT}/sendMessage" \
+            --data-urlencode "chat_id=${CHAT}" \
+            --data-urlencode "parse_mode=Markdown" \
+            --data-urlencode "text=${TEXT}"
+
+      - name: PR merged
+        if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
+        env:
+          BOT: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TITLE: ${{ github.event.pull_request.title }}
+          USER: ${{ github.event.pull_request.user.login }}
+          URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          case "$TITLE" in
+            claim:*)    TAG="[DR/LOCK]" ;;
+            unclaim:*)  TAG="[DR/FREED]" ;;
+            override:*) TAG="[DR/SEIZED]" ;;
+            DR-*)       TAG="[DR/DONE]" ;;
+            *)          TAG="[DR/MERGED]" ;;
+          esac
+          TEXT=$(printf '%s merged: `%s`\n%s' "${TAG} *${USER}*" "$TITLE" "$URL")
+          curl -sS -X POST "https://api.telegram.org/bot${BOT}/sendMessage" \
+            --data-urlencode "chat_id=${CHAT}" \
+            --data-urlencode "parse_mode=Markdown" \
+            --data-urlencode "text=${TEXT}"
+
+      - name: Push to main (direct, non-PR commits)
+        if: github.event_name == 'push'
+        env:
+          BOT: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT: ${{ secrets.TELEGRAM_CHAT_ID }}
+          MSG: ${{ github.event.head_commit.message }}
+          USER: ${{ github.event.head_commit.author.name }}
+          URL: ${{ github.event.head_commit.url }}
+        run: |
+          # Skip merge commits and squash-merged PR commits — already covered by the PR-merged step
+          if [[ "$MSG" =~ ^Merge[[:space:]]pull[[:space:]]request ]] || [[ "$MSG" =~ \(#[0-9]+\) ]]; then
+            exit 0
+          fi
+          FIRST_LINE=$(printf '%s\n' "$MSG" | head -n1)
+          TEXT=$(printf '[DR/PUSH] *%s*: `%s`\n%s' "$USER" "$FIRST_LINE" "$URL")
+          curl -sS -X POST "https://api.telegram.org/bot${BOT}/sendMessage" \
+            --data-urlencode "chat_id=${CHAT}" \
+            --data-urlencode "parse_mode=Markdown" \
+            --data-urlencode "text=${TEXT}"
