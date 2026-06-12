@@ -13,9 +13,9 @@ Single source of truth for what's in flight during the Dead Ringer sprint. Anyon
 ## How to use this file (90-second version)
 
 1. **Find a pickable task** — `Status: pending` AND every entry in `Depends-on` is `done`.
-2. **Claim** — change `Status: pending` → `Status: in-progress @your-handle YYYY-MM-DD`. During the sprint, edit `TODO.md` directly on `main` and push — **the push is the lock**. Don't skip the visible status change; teammates need to see it.
-3. **Work** — branch `feat/DR-XXX-<slug>` if you want isolation, or commit straight to `main` (ground rule: `main` stays working at all times). Reference `DR-XXX` in every commit.
-4. **Finish** — the commit that lands the work also flips the line to `Status: done @your-handle YYYY-MM-DD` and moves the task block to the **Done** section at the bottom.
+2. **Claim** — change `Status: pending` → `Status: in-progress @your-handle YYYY-MM-DD`. Commit that line on your task branch; the merge of your PR records the lock. Urgent/solo: push the status line straight to `main` — the push is the lock.
+3. **Work** — branch `feat/DR-XXX-<slug>` off `main`, commit referencing `DR-XXX` in every message. Open a PR when ready — **non-draft PRs auto-merge (squash) on their own** via [`auto-merge.yml`](.github/workflows/auto-merge.yml). Keep the PR a **draft** while still working; mark it **Ready for review** to merge. One task = one PR.
+4. **Finish** — the same PR flips the line to `Status: done @your-handle YYYY-MM-DD` and moves the task block to the **Done** section at the bottom. Merge happens automatically and the branch auto-deletes.
 5. **Stuck** — change to `Status: blocked — <one-line reason>` and ping the team channel. Keep the entry; do not delete it.
 6. **Add a task** — append a new block under the right section using the next free ID. Mirror an existing block's shape — don't invent fields. State `Acceptance` clearly so anyone can pick it up cold.
 7. **Drop a claim** — flip `Status: in-progress @you DATE` back to `Status: pending`. No shame in it.
@@ -30,7 +30,8 @@ This is a 24-hour sprint, so klink's 5-day rule compresses: if a task is `in-pro
 |---|---|
 | Branch | `feat/DR-XXX-<short-slug>` / `fix/DR-XXX-<slug>` / `docs/DR-XXX-<slug>` |
 | Commit | `DR-XXX: <verb> <object>` (e.g. `DR-102: add placeVerdicts payable slip`) |
-| PR title (if used) | `DR-XXX — <task title>` — direct pushes to `main` are the sprint default |
+| PR title | `DR-XXX — <task title>` |
+| Merging | one PR per task; **non-draft PRs auto-merge (squash)** via [`auto-merge.yml`](.github/workflows/auto-merge.yml). Draft = WIP, Ready = merge. Branches auto-delete on merge |
 | Scope per commit/PR | One task = one unit of work. If it balloons, stop and split — second thing gets a new DR-XXX entry |
 | Network | **Mantle Sepolia testnet only** (chainId 5003). No mainnet heroics. |
 | Sibling repo | klink = `T-XXX` on Solana devnet; Dead Ringer = `DR-XXX` on Mantle Sepolia. Different prefixes, different chains, zero overlap by construction |
@@ -260,7 +261,7 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 - OS: any
 - Scope: web, docs
 - Acceptance: with `@Mouli` — hero, live two-feed teaser, how-it-works, builder section.
-- Notes: Cut #2 (partial) — builder section goes if behind. Branch `frontend` already has the landing skeleton (`Hero/Lineup/Evidence/Builders/Colophon` sections + scramble/split-flap flourishes) — this task is the copy/content pass over it.
+- Notes: Cut #2 (partial) — builder section goes if behind. The `web/` app on `main` already has the landing skeleton (`Hero/Lineup/Evidence/Builders/Colophon` sections + scramble/split-flap flourishes) — this task is the copy/content pass over it.
 
 ### DR-209 — Seed the juicy demo round
 - Status: pending
@@ -281,7 +282,7 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 - OS: any
 - Scope: web, setup
 - Acceptance: Next.js + Tailwind + Framer Motion + wagmi/viem scaffolded under `/web` with Mantle Sepolia chain config (chainId 5003); dev server pinned to port **3100** (klink owns 3000/3030).
-- Notes: scaffolded on branch `frontend` (Next 16 / React 19 / Tailwind 4 / Framer Motion + GSAP + Lenis) — but the app sits at the branch ROOT on an orphan history (no merge base with `main`); re-root under `/web` or adopt at DR-401. Still missing: wagmi/viem, Mantle Sepolia (5003) config, port 3100 pin — "Mantle" currently appears in copy text only.
+- Notes: merged to `main` under `web/` (DR-401) — Next 16 / React 19 / Tailwind 4 / Framer Motion + GSAP + Lenis. Scaffold itself is done; this task stays open for the chain wiring still missing: wagmi/viem, Mantle Sepolia (5003) config, and pinning `next dev` to port 3100 ("Mantle" currently appears in copy text only).
 
 ### DR-302 — Design tokens
 - Status: in-progress @Mouli 2026-06-12
@@ -290,7 +291,7 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 - OS: any
 - Scope: design
 - Acceptance: tokens from the master UI prompt applied — dark evidence-room palette, monospace for data, zero gradients.
-- Notes: "noir editorial" system landed on branch `frontend` (`globals.css`: oklch ink/dim palette, mono data, `.noir-grid` — the linear-gradients there are 1px grid lines, not color fades, so the zero-gradients rule holds).
+- Notes: "noir editorial" system landed on `main` (under `web/`) (`globals.css`: oklch ink/dim palette, mono data, `.noir-grid` — the linear-gradients there are 1px grid lines, not color fades, so the zero-gradients rule holds).
 
 ### DR-303 — Mock data layer
 - Status: in-progress @Mouli 2026-06-12
@@ -299,7 +300,7 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 - OS: any
 - Scope: web
 - Acceptance: `mockData.ts` with 6 suspects, streaming fake trades, round countdown — frontend never waits on contracts or backend.
-- Notes: lives on branch `frontend` as `src/lib/mock.ts` + `suspects.ts` + `store.tsx` (deterministic seeded set, ticking trades). ⚠️ Ships **8 suspects (4 bots / 4 humans)** — DR-502's locked decision says **6 (4 bots / 2 humans)**. Reconcile one way or the other before integration.
+- Notes: lives on `main` (under `web/`) as `web/src/lib/mock.ts` + `suspects.ts` + `store.tsx` (deterministic seeded set, ticking trades). ⚠️ Ships **8 suspects (4 bots / 4 humans)** — DR-502's locked decision says **6 (4 bots / 2 humans)**. Reconcile one way or the other before integration.
 
 ### DR-304 — Dossier card (the hero component)
 - Status: in-progress @Mouli 2026-06-12
@@ -308,7 +309,7 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 - OS: any
 - Scope: web, design
 - Acceptance: codename stamp, sparkline, 3 behavioral tells, HUMAN↔BOT verdict slider with live payout multiplier.
-- Notes: **Never cut.** On branch `frontend`: `DossierCard.tsx` + `VerdictSlider.tsx` + `Sparkline.tsx` + `TellChip.tsx` + `Stamp.tsx` all exist — verify acceptance against mocks, don't rebuild.
+- Notes: **Never cut.** On `main` (under `web/`): `DossierCard.tsx` + `VerdictSlider.tsx` + `Sparkline.tsx` + `TellChip.tsx` + `Stamp.tsx` all exist — verify acceptance against mocks, don't rebuild.
 
 ### DR-305 — Arena page
 - Status: in-progress @Mouli 2026-06-12
@@ -317,7 +318,7 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 - OS: any
 - Scope: web
 - Acceptance: dossier-card grid + live trade tape + round status rail.
-- Notes: on branch `frontend`: `src/app/(app)/arena/page.tsx` + `TradeTape.tsx` + `Countdown.tsx`.
+- Notes: on `main` (under `web/`): `web/src/app/(app)/arena/page.tsx` + `TradeTape.tsx` + `Countdown.tsx`.
 
 ### DR-306 — Guess slip
 - Status: in-progress @Mouli 2026-06-12
@@ -326,7 +327,7 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 - OS: any
 - Scope: web
 - Acceptance: docked panel (mobile: bottom sheet) collecting verdicts; stake input, projected payout, `Lock verdicts` → wagmi tx (against mocks until DR-310).
-- Notes: `GuessSlip.tsx` on branch `frontend`; the wagmi tx half waits on DR-301's chain config.
+- Notes: `GuessSlip.tsx` on `main` (under `web/`); the wagmi tx half waits on DR-301's chain config.
 
 ### DR-307 — Suspect detail drawer
 - Status: in-progress @Mouli 2026-06-12
@@ -335,7 +336,7 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 - OS: any
 - Scope: web
 - Acceptance: trade history table, activity heatmap, crowd-sentiment bar.
-- Notes: Cut #2 (partial) — heatmap goes if behind. `SuspectDrawer.tsx` exists on branch `frontend`.
+- Notes: Cut #2 (partial) — heatmap goes if behind. `SuspectDrawer.tsx` exists on `main` (under `web/`).
 
 ### DR-308 — Reveal ceremony page
 - Status: in-progress @Mouli 2026-06-12
@@ -344,7 +345,7 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 - OS: any
 - Scope: web, design
 - Acceptance: staggered redaction-tear animation → HUMAN/BOT stamps → score card. This is the demo climax — make it perfect.
-- Notes: **Never cut.** `src/app/(app)/reveal/page.tsx` on branch `frontend` — it already draws a share canvas ("CAN YOU SPOT THE MACHINE? · BUILT ON MANTLE"), which overlaps DR-309.
+- Notes: **Never cut.** `web/src/app/(app)/reveal/page.tsx` on `main` (under `web/`) — it already draws a share canvas ("CAN YOU SPOT THE MACHINE? · BUILT ON MANTLE"), which overlaps DR-309.
 
 ### DR-309 — Share-card generator
 - Status: pending
@@ -353,7 +354,7 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 - OS: any
 - Scope: web
 - Acceptance: html-to-image share card — "4/6 · Top 8% Detective".
-- Notes: Cut #1 — falls back to a static mock image. Check branch `frontend` first: the reveal page already renders a share canvas (DR-308 note) — extend that rather than starting fresh.
+- Notes: Cut #1 — falls back to a static mock image. Check the `web/` app on `main` first: the reveal page already renders a share canvas (DR-308 note) — extend that rather than starting fresh.
 
 ### DR-310 — Swap mocks → real feed + contracts
 - Status: pending
@@ -370,7 +371,7 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 - OS: any
 - Scope: web
 - Acceptance: two tabs from real round data — **Detectives** (accuracy) and **Dead Ringers** (fool-rate).
-- Notes: Cut #4 — hardcode plausible data if behind, but the fool-rate tab must exist; it's the inverted-Turing-test story. `leaderboard/page.tsx` exists on branch `frontend` (mock-fed); real-data wiring still open.
+- Notes: Cut #4 — hardcode plausible data if behind, but the fool-rate tab must exist; it's the inverted-Turing-test story. `leaderboard/page.tsx` exists on `main` (under `web/`) (mock-fed); real-data wiring still open.
 
 ### DR-312 — Mobile pass on demo-critical screens
 - Status: pending
@@ -387,7 +388,7 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 - OS: any
 - Scope: web
 - Acceptance: loading skeletons, empty states, and error toasts on every screen in the demo path.
-- Notes: `Skeleton.tsx` + `Toasts.tsx` primitives already exist on branch `frontend` — this task is applying them across the demo path, not building them.
+- Notes: `Skeleton.tsx` + `Toasts.tsx` primitives already exist on `main` (under `web/`) — this task is applying them across the demo path, not building them.
 
 ### DR-314 — Landing page final polish
 - Status: pending
@@ -408,7 +409,7 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 - OS: any
 - Scope: setup
 - Acceptance: monorepo layout `/contracts`, `/web`, `/agents`; README skeleton with the one-liner.
-- Notes: ⚠️ branch `frontend` is an ORPHAN history (no merge base with `main`) with the Next.js app at its root, plus its own README/CLAUDE.md/AGENTS.md and a `ui-inspo/` scratch dir. Decide the merge strategy here (graft into `/web` vs adopt the layout) before anyone else branches off it.
+- Notes: ✅ resolved 2026-06-13 — the orphan `frontend` branch (Next.js app at its root, no merge base) was subtree-merged under `web/`, preserving @Mouli's history without disturbing root `README`/`TODO`. `web/ui-inspo/` is a scratch dir that rode along — delete when convenient. Remaining: add `/contracts` and `/agents` siblings when DR-101 / DR-202 land.
 
 ### DR-402 — Chain ops: wallets, faucet, RPC
 - Status: pending

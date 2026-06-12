@@ -1,0 +1,74 @@
+name: Auto-merge PRs
+
+# Sprint model (DR-401): everyone works in their own branch. Opening a
+# non-draft PR merges it automatically (squash) so `main` stays a clean line
+# of DR-XXX commits and the team never waits on a manual merge.
+#
+#   draft PR      = work in progress, NOT merged
+#   ready PR      = auto-merged (squash) as soon as it's mergeable
+#
+# Adapted from klink's auto-merge.yml, broadened from claim-only to every task
+# PR. Forked PRs are skipped (safety). Pairs with telegram-notify.yml, which
+# announces the open + the merge.
+
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review, synchronize]
+
+jobs:
+  auto-merge:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Merge when ready
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            if (pr.head.repo.full_name !== context.repo.owner + '/' + context.repo.repo) {
+              core.info('Forked PR — skipping auto-merge.');
+              return;
+            }
+            // Preferred: native auto-merge — waits for any required checks,
+            // then squash-merges. Needs "Allow auto-merge" on in repo settings.
+            try {
+              await github.graphql(
+                `mutation($id: ID!, $m: PullRequestMergeMethod!) {
+                  enablePullRequestAutoMerge(input: {pullRequestId: $id, mergeMethod: $m}) {
+                    pullRequest { number }
+                  }
+                }`,
+                { id: pr.node_id, m: 'SQUASH' }
+              );
+              core.info(`Auto-merge enabled for PR #${pr.number}.`);
+              return;
+            } catch (e) {
+              core.warning(`enablePullRequestAutoMerge failed (${e.message}); trying an immediate squash merge.`);
+            }
+            // Fallback: "Allow auto-merge" is off (repo-owner setting) or there
+            // are no required checks — merge now if mergeable, then delete the
+            // branch ourselves since auto-delete is also an owner setting.
+            try {
+              await github.rest.pulls.merge({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.number,
+                merge_method: 'squash',
+              });
+              core.info(`Squash-merged PR #${pr.number}.`);
+              try {
+                await github.rest.git.deleteRef({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ref: `heads/${pr.head.ref}`,
+                });
+                core.info(`Deleted branch ${pr.head.ref}.`);
+              } catch (e) {
+                core.warning(`Branch delete skipped: ${e.message}`);
+              }
+            } catch (e) {
+              core.warning(`Could not merge PR #${pr.number} yet: ${e.message}`);
+            }
