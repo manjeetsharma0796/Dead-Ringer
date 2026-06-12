@@ -114,7 +114,7 @@ The hour-by-hour plan from the original sprint doc, expressed as gates. A task's
 Every block also carries `Owner: @handle` — the pre-assigned sprint lane from the original plan, i.e. who has taken the task. It's the default assignee, not the lock: the lock is still flipping Status to `in-progress` when you actually start. Picking outside your lane is fine when you're unblocked and it helps the critical path.
 
 ### DR-101 — Arena.sol round lifecycle + suspect registry
-- Status: pending
+- Status: in-progress @Manjeet 2026-06-13
 - Owner: @Manjeet
 - Depends-on: DR-401
 - OS: any
@@ -122,7 +122,7 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 - Acceptance: round states `open → locked → revealed`; suspect registry stores `identityCommit = keccak256(isHuman, salt)` per suspect; only the operator can open/lock rounds and register suspects.
 
 ### DR-102 — Staking: placeVerdicts slip
-- Status: pending
+- Status: in-progress @Manjeet 2026-06-13
 - Owner: @Manjeet
 - Depends-on: DR-101
 - OS: any
@@ -130,7 +130,7 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 - Acceptance: `placeVerdicts(roundId, suspectIds[], verdicts[], confidences[])` payable in MNT — one tx covers the whole slip; reverts after the round locks; stake recorded per player per suspect.
 
 ### DR-103 — Reveal + settle
-- Status: pending
+- Status: in-progress @Manjeet 2026-06-13
 - Owner: @Manjeet
 - Depends-on: DR-101
 - OS: any
@@ -146,7 +146,7 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 - Acceptance: winners pull payouts via `claim()`; a simple house-edge skim accrues to the protocol (story point: protocol revenue).
 
 ### DR-105 — Happy-path test suite
-- Status: pending
+- Status: in-progress @Manjeet 2026-06-13
 - Owner: @Manjeet
 - Depends-on: DR-104
 - OS: any
@@ -206,7 +206,7 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 - Acceptance: applications submitted at kickoff for Z.AI / Nansen / other partner credits — approval takes time, so this fires in hour 0.
 
 ### DR-202 — Trade simulator service
-- Status: pending
+- Status: in-progress @Prithwish 2026-06-13
 - Owner: @Prithwish
 - Depends-on: DR-401
 - OS: any
@@ -231,7 +231,7 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 - Acceptance: tiny admin page where 2 humans (`@Jishnu` + one more) place manual paper trades; usable in spare moments all day — real human noise in the feed.
 
 ### DR-205 — Trade stream endpoint
-- Status: pending
+- Status: in-progress @Prithwish 2026-06-13
 - Owner: @Prithwish
 - Depends-on: DR-202
 - OS: any
@@ -512,7 +512,7 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 > Lead: `@Jishnu` (deck: `@Mouli`). The story is the product on judging day.
 
 ### DR-501 — Lock the demo script FIRST
-- Status: pending
+- Status: in-progress @Jishnu 2026-06-13
 - Owner: all hands
 - Depends-on: —
 - OS: any
@@ -529,7 +529,7 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 - Notes: ⚠️ the frontend mock (DR-303) currently ships **8 suspects (4 bots / 4 humans)** — either ratify 8/4/4 by editing this task or fix the mock to 6/4/2. Contracts + bots must match whatever is ratified.
 
 ### DR-503 — Demo storyboard
-- Status: pending
+- Status: in-progress @Jishnu 2026-06-13
 - Owner: @Jishnu
 - Depends-on: DR-501
 - OS: any
