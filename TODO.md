@@ -164,7 +164,7 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 - OS: any
 - Scope: deploy
 - Acceptance: contracts live on Mantle Sepolia (chainId 5003); addresses saved where web/agents read them (env + a `deployments` note); source verified on the explorer — **submission requires the contract address**.
-- Notes: ⚠️ Everything is wired: `deploy.ts` exports the ABI to `web/` and writes `deployments/mantleSepolia.json`; `npx hardhat verify` is configured. **One human action remains** — faucet MNT into a deployer key, put it in `contracts/.env` as `PRIVATE_KEY`, then `npm run deploy:mantleSepolia`. Full steps in [RUN.md](RUN.md) §B. The whole loop already runs on a local node end-to-end.
+- Notes: ⚠️ Everything is wired: `deploy.ts` exports the ABI to `web/` and writes `deployments/mantleSepolia.json`; `npx hardhat verify` is configured. **One human action remains** — faucet MNT into a deployer key, put it in `contracts/.env` as `PRIVATE_KEY`, then `npm run deploy:mantleSepolia`. Full steps in [RUN.md](RUN.md) §B. **Verified 2026-06-13:** the full pipeline (`deploy → seedRound → reveal → settle → claim`) runs green on a local node — pot 2 MNT, the correct detective nets 1.92 (4% edge), the fooled bettor's claim reverts, crowd-sentiment view returns; web ABI confirmed in sync. Purely funding-gated now.
 
 ### DR-107 — Crowd-sentiment view function
 - Status: done @Prithwish 2026-06-13
@@ -194,12 +194,13 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 - Notes: ✅ `contracts/scripts/seedRound.ts` (open + register 8 suspects, persist salts) and `revealRound.ts` (lock + reveal + settle). Plus `dryRun.ts` (full bet→claim loop). Run on any network via `--network <net>`; proven on localhost. Works on Mantle Sepolia once DR-106 deploys.
 
 ### DR-110 — Explorer polish + NatSpec
-- Status: pending
+- Status: in-progress @Manjeet 2026-06-13
 - Owner: @Manjeet
 - Depends-on: DR-106
 - OS: any
 - Scope: contracts, docs
 - Acceptance: all deployed contracts verified on the explorer with tidy NatSpec comments — judges read contracts.
+- Notes: NatSpec half ✅ done (PR #10) — `Arena.sol` header + `contracts/README` no longer call `settle`/`claim` stubs; both now document the shipped parimutuel model (4% edge, refund mode) and the `crowdSentiment`/`previewPayout`/`getPlayers` views. Remaining half = `npx hardhat verify` on the explorer, which rides on the DR-106 deploy — stays in-progress until the contract is live.
 
 ## 2 — Backend + agents
 
