@@ -218,13 +218,13 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 - Notes: ✅ shipped on `main` — `agents/` Express+ws service on :3101 (PR #2): CoinGecko feed (live-verified BTC/ETH), paper-trade engine emitting the exact frontend `Trade` shape (human/bot parity by construction), JSON trade log. `SUSPECT_COUNT` is a single config constant for the 6-vs-8 decision; feed source swappable (Bybit later).
 
 ### DR-203 — Bot personalities ×4
-- Status: pending
+- Status: done @Prithwish 2026-06-13
 - Owner: @Prithwish
 - Depends-on: DR-202, DR-201
 - OS: any
 - Scope: agents
 - Acceptance: four distinct behavioral fingerprints running against the simulator — **The Quant** (metronomic intervals, tight stop-losses, round-number trades), **The Degen** (LLM-driven via Z.AI: FOMO entries, revenge trades, oversized positions), **The Sleeper** (mimics human sleep cycle, sloppy timing, occasional fat-finger + immediate correction — the one designed to fool people), **Paper Hands** (sells every dip, buys every pump, painfully human-looking).
-- Notes: Cut #3 — if behind, drop to 3 bots (Paper Hands goes first).
+- Notes: ✅ shipped on `main` — `agents/src/bots/{quant,degen,sleeper,paperHands}.ts` + `support.ts` (price tracker / position mirror) + `index.ts` registry (`createBots`), wired in `src/index.ts`. The `Order`/runner now support `close:true` so stop-losses & fat-finger corrections emit clean close trades. Cut #3 honored via `DISABLE_PAPER_HANDS` env (→ 3 bots). **The Degen ships a deterministic heuristic** that reproduces the FOMO/revenge/oversize fingerprint — the Z.AI/LLM brain is a documented hook behind `ZAI_API_KEY`, still **blocked on DR-201** credits; swap is interface-compatible. 8 `node:test` unit tests cover every behavioral branch (injectable rng/clock); smoke-boot registers all 4 bots on :3101. Cut #3 — if behind, set `DISABLE_PAPER_HANDS=true`.
 
 ### DR-204 — Human trader slots + admin page
 - Status: pending
@@ -607,6 +607,7 @@ Prep during the buffer hour, use on stage: put two live trade feeds on screen. A
 
 _Done this sprint (blocks flipped in place, newest first):_
 
+- **DR-203** @Prithwish — bot personalities ×4 (Quant/Degen/Sleeper/PaperHands), 8 unit tests (`agents/`)
 - **DR-401** @Jishnu — root README: monorepo architecture + run instructions (PR #6)
 - **DR-207** @Prithwish — behavioral tells, pure stats over the trade log (`agents/`, PR #5)
 - **DR-503 / DR-501** @Jishnu — demo script + storyboard (`docs/`, PR #4)

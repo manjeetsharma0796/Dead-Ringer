@@ -13,9 +13,15 @@ require("dotenv").config();
 import { FeedManager, CoinGeckoFeed } from "./feed/index.js";
 import { TradeEngine } from "./engine/index.js";
 import { BotRunner } from "./bots/runner.js";
-import { BaselineBot } from "./bots/baseline.js";
+import { createBots } from "./bots/index.js";
 import { startServer } from "./server/index.js";
-import { FEED_ASSETS, FEED_POLL_MS, SUSPECT_IDS } from "./config.js";
+import {
+  FEED_ASSETS,
+  FEED_POLL_MS,
+  SUSPECT_IDS,
+  BOT_COUNT,
+  DISABLE_PAPER_HANDS,
+} from "./config.js";
 
 // ── 1. Price feed ──────────────────────────────────────────────────────────
 const feed = new FeedManager(new CoinGeckoFeed(), FEED_ASSETS, FEED_POLL_MS);
@@ -26,19 +32,16 @@ const engine = new TradeEngine();
 
 // ── 3. Bot runner ─────────────────────────────────────────────────────────
 //
-// DR-202 default: suspects 1–4 are bots; suspects 5–6 are human slots.
-// Adjust these IDs once DR-502 locks the final count/split.
-//
-// DR-203 TODO: replace BaselineBot instances with real personalities:
-//   suspect 1 → The Quant
-//   suspect 2 → The Degen
-//   suspect 3 → The Sleeper
-//   suspect 4 → Paper Hands (or drop if cut #3 applies)
-const BOT_SUSPECT_IDS = SUSPECT_IDS.slice(0, 4); // first 4 suspects are bots
+// DR-502 (8 suspects, 4 bots / 4 humans): the leading BOT_COUNT suspects are
+// bots; the rest are human slots. DR-203: each bot is a distinct personality
+// (The Quant / The Degen / The Sleeper / Paper Hands) — see ./bots/index.ts.
+const BOT_SUSPECT_IDS = SUSPECT_IDS.slice(0, BOT_COUNT);
 
 const runner = new BotRunner(engine);
-for (const id of BOT_SUSPECT_IDS) {
-  runner.register(new BaselineBot(id));
+for (const bot of createBots(BOT_SUSPECT_IDS, {
+  disablePaperHands: DISABLE_PAPER_HANDS,
+})) {
+  runner.register(bot);
 }
 runner.start(() => feed.latest());
 

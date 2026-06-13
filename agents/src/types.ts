@@ -46,6 +46,14 @@ export interface Order {
   side: "BUY" | "SELL";
   pair: string;
   size: number;
+  /**
+   * When true, close the existing position on `pair` instead of opening a new
+   * one (used by stop-losses and the Sleeper's fat-finger correction). The
+   * runner routes these to `engine.closePosition`; `side`/`size` are ignored.
+   */
+  close?: boolean;
+  /** Optional human-readable reason, surfaced in bot logs for debugging. */
+  note?: string;
 }
 
 /** Bot interface — each personality implements this. */

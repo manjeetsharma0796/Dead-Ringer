@@ -45,3 +45,12 @@ export const TRADES_FILE = "data/trades.json";
 // ── Bot runner ────────────────────────────────────────────────────────────
 /** How often the bot runner ticks (all bots decide simultaneously). */
 export const BOT_TICK_MS = 5000;
+
+/** How many of the leading suspects are bots (rest are human slots). */
+export const BOT_COUNT = 4;
+
+/**
+ * DR-203 Cut #3 — drop the 4th bot (Paper Hands) when behind schedule.
+ * Set DISABLE_PAPER_HANDS=true to fall back to 3 bots.
+ */
+export const DISABLE_PAPER_HANDS = process.env["DISABLE_PAPER_HANDS"] === "true";
