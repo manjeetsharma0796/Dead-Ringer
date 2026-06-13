@@ -6,7 +6,7 @@ dotenv.config();
 
 const MANTLE_SEPOLIA_RPC =
   process.env.MANTLE_SEPOLIA_RPC || "https://rpc.sepolia.mantle.xyz";
-const PRIVATE_KEY = process.env.PRIVATE_KEY;
+const PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY || process.env.PRIVATE_KEY;
 const MANTLESCAN_API_KEY = process.env.MANTLESCAN_API_KEY || "";
 
 const config: HardhatUserConfig = {
