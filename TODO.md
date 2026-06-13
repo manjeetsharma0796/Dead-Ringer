@@ -158,13 +158,13 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 - Notes: ✅ shipped on `main` (PR #1) — Hardhat+chai, 16 tests passing: full lifecycle (open→register→stake→lock→reveal) asserting events + escrow, wrong-salt + flipped-bit reveal reverts, and settle/claim stub reverts. (`claim` itself is stubbed — DR-104.) Depends-on corrected from DR-104 (was inverted).
 
 ### DR-106 — Deploy to Mantle Sepolia + verify
-- Status: pending — **READY, blocked only on a funded wallet (DR-402)**
+- Status: done @Manjeet 2026-06-13
 - Owner: @Manjeet
 - Depends-on: DR-105, DR-402
 - OS: any
 - Scope: deploy
 - Acceptance: contracts live on Mantle Sepolia (chainId 5003); addresses saved where web/agents read them (env + a `deployments` note); source verified on the explorer — **submission requires the contract address**.
-- Notes: ⚠️ Everything is wired: `deploy.ts` exports the ABI to `web/` and writes `deployments/mantleSepolia.json`; `npx hardhat verify` is configured. **One human action remains** — faucet MNT into a deployer key, put it in `contracts/.env` as `PRIVATE_KEY`, then `npm run deploy:mantleSepolia`. Full steps in [RUN.md](RUN.md) §B. **Verified 2026-06-13:** the full pipeline (`deploy → seedRound → reveal → settle → claim`) runs green on a local node — pot 2 MNT, the correct detective nets 1.92 (4% edge), the fooled bettor's claim reverts, crowd-sentiment view returns; web ABI confirmed in sync. Purely funding-gated now.
+- Notes: ⚠️ Everything is wired: `deploy.ts` exports the ABI to `web/` and writes `deployments/mantleSepolia.json`; `npx hardhat verify` is configured. ✅ **DEPLOYED 2026-06-13** (PR #12): Arena at `0x1190506A196A0598416B0673F84071C6BC7C63A1` on Mantle Sepolia (chainId 5003), operator `0x7176DC1B76a17BB502324Dd825EaB983F675DD7a`, tx `0x667777ab1869…f374016`, **Sourcify-verified** (full match). Address recorded in `deployments/mantleSepolia.json` and wired into both READMEs + `web/.env.example`. RUN.md §B has the steps. **Verified 2026-06-13:** the full pipeline (`deploy → seedRound → reveal → settle → claim`) runs green on a local node — pot 2 MNT, the correct detective nets 1.92 (4% edge), the fooled bettor's claim reverts, crowd-sentiment view returns; web ABI confirmed in sync. (Local-node proof retained as a regression check.)
 
 ### DR-107 — Crowd-sentiment view function
 - Status: done @Prithwish 2026-06-13
@@ -194,13 +194,13 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 - Notes: ✅ `contracts/scripts/seedRound.ts` (open + register 8 suspects, persist salts) and `revealRound.ts` (lock + reveal + settle). Plus `dryRun.ts` (full bet→claim loop). Run on any network via `--network <net>`; proven on localhost. Works on Mantle Sepolia once DR-106 deploys.
 
 ### DR-110 — Explorer polish + NatSpec
-- Status: in-progress @Manjeet 2026-06-13
+- Status: done @Manjeet 2026-06-13
 - Owner: @Manjeet
 - Depends-on: DR-106
 - OS: any
 - Scope: contracts, docs
 - Acceptance: all deployed contracts verified on the explorer with tidy NatSpec comments — judges read contracts.
-- Notes: NatSpec half ✅ done (PR #10) — `Arena.sol` header + `contracts/README` no longer call `settle`/`claim` stubs; both now document the shipped parimutuel model (4% edge, refund mode) and the `crowdSentiment`/`previewPayout`/`getPlayers` views. Remaining half = `npx hardhat verify` on the explorer, which rides on the DR-106 deploy — stays in-progress until the contract is live.
+- Notes: NatSpec half ✅ done (PR #10) — `Arena.sol` header + `contracts/README` no longer call `settle`/`claim` stubs; both now document the shipped parimutuel model (4% edge, refund mode) and the `crowdSentiment`/`previewPayout`/`getPlayers` views. Verify half ✅ done (PR #12) — `0x1190…63A1` verified on Sourcify (full match). (Mantle's Blockscout `/api` returned HTML so the Etherscan-path verify was skipped; Sourcify is the canonical match Mantle's explorer reads.) Both halves complete.
 
 ## 2 — Backend + agents
 
@@ -615,6 +615,8 @@ Prep during the buffer hour, use on stage: put two live trade feeds on screen. A
 
 _Done this sprint (blocks flipped in place, newest first):_
 
+- **DR-106** @Manjeet — Arena DEPLOYED to Mantle Sepolia + Sourcify-verified: `0x1190506A196A0598416B0673F84071C6BC7C63A1` (PR #12)
+- **DR-110** @Manjeet — NatSpec + README reflect shipped parimutuel (PR #10) + Sourcify verification (PR #12)
 - **DR-103/104/107/108** @Prithwish — parimutuel `settle`/`claim` + 4% house edge, crowd-sentiment, edge cases (`contracts/`); 25 tests + live-node dry-run
 - **DR-109** @Prithwish — round-runner scripts: `seedRound`/`revealRound`/`dryRun` (`contracts/scripts/`)
 - **DR-310/313** @Prithwish — web wired to real ws feed + Arena contract, graceful mock fallback, loading/error states (`web/`)
