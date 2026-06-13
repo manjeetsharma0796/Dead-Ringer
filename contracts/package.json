@@ -9,6 +9,9 @@
     "test": "hardhat test",
     "deploy": "hardhat run scripts/deploy.ts",
     "deploy:mantleSepolia": "hardhat run scripts/deploy.ts --network mantleSepolia",
+    "export:abi": "hardhat run scripts/exportAbi.ts",
+    "seed:round": "hardhat run scripts/seedRound.ts",
+    "reveal:round": "hardhat run scripts/revealRound.ts",
     "clean": "hardhat clean"
   },
   "devDependencies": {

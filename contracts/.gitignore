@@ -3,3 +3,7 @@ cache
 artifacts
 .env
 typechain-types
+
+# Ephemeral local-node deployment artifacts (the real testnet record IS committed)
+deployments/localhost.json
+deployments/round-*.json

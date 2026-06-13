@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Suspect, Trade } from "@/lib/types";
-import { nextTrade } from "@/lib/mock";
 import { fmtPnl, fmtPrice, fmtSize } from "@/lib/format";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useMounted } from "@/lib/useMounted";
+import { useTradeFeed } from "@/lib/useTradeFeed";
 
 /*
  * Live trade tape. Fixed column header, right-aligned numerics, fixed
@@ -34,52 +34,27 @@ export function TradeTape({
   onSelectSuspect?: (id: number) => void;
 }) {
   const mounted = useMounted();
-  const [trades, setTrades] = useState<Trade[]>([]);
+  // Live feed from the agents backend with automatic mock fallback (DR-313).
+  const { trades: feedTrades } = useTradeFeed(suspects);
   const paused = useRef(false);
-  const counter = useRef(0);
-  const filterRef = useRef<number | null>(filterSuspect);
+  // Hover-to-pause freezes the displayed snapshot while the feed keeps running.
+  const [frozen, setFrozen] = useState<Trade[] | null>(null);
 
-  useEffect(() => {
-    filterRef.current = filterSuspect;
-  }, [filterSuspect]);
-
-  useEffect(() => {
-    if (!mounted) return;
-    let timer: ReturnType<typeof setTimeout>;
-    const tick = () => {
-      if (!paused.current) {
-        // bias generation toward the filtered suspect so its tape stays live
-        const f = filterRef.current;
-        const s =
-          f !== null && counter.current % 2 === 0
-            ? (suspects.find((x) => x.id === f) ?? suspects[0])
-            : suspects[Math.floor(Math.random() * suspects.length)];
-        counter.current += 1;
-        const t = nextTrade(Math.random, s.id, counter.current);
-        setTrades((prev) => [t, ...prev].slice(0, 80));
-      }
-      timer = setTimeout(tick, 1000 + Math.random() * 3000);
-    };
-    // seed with backdated, jittered timestamps — no same-second pileups
-    let at = Date.now();
-    const seed: Trade[] = Array.from({ length: Math.min(rows, 14) }, (_, i) => {
-      counter.current += 1;
-      at -= 1200 + Math.random() * 12000;
-      return nextTrade(Math.random, suspects[i % suspects.length].id, counter.current, new Date(at));
-    });
-    setTrades(seed);
-    timer = setTimeout(tick, 900);
-    return () => clearTimeout(timer);
-  }, [mounted, suspects, rows]);
-
+  const source = frozen ?? feedTrades;
   const cols = compact ? COMPACT_COLS : FULL_COLS;
-  const visible = (filterSuspect !== null ? trades.filter((t) => t.suspectId === filterSuspect) : trades).slice(0, rows);
+  const visible = (filterSuspect !== null ? source.filter((t) => t.suspectId === filterSuspect) : source).slice(0, rows);
 
   return (
     <div
       className={`overflow-hidden ${className}`}
-      onMouseEnter={() => (paused.current = true)}
-      onMouseLeave={() => (paused.current = false)}
+      onMouseEnter={() => {
+        paused.current = true;
+        setFrozen(feedTrades);
+      }}
+      onMouseLeave={() => {
+        paused.current = false;
+        setFrozen(null);
+      }}
       aria-label="Live trade tape. Hover to pause."
     >
       {/* fixed column header */}
@@ -96,12 +71,16 @@ export function TradeTape({
         <span className="text-right">PnL/USDT</span>
       </div>
 
-      {!mounted ? (
-        <div className="space-y-1.5 pt-2" aria-hidden="true">
+      {!mounted || source.length === 0 ? (
+        <div className="space-y-1.5 pt-2" aria-label="Waiting for trades…">
           {Array.from({ length: compact ? 5 : 12 }, (_, i) => (
             <Skeleton key={i} className="h-4 w-full" />
           ))}
         </div>
+      ) : visible.length === 0 ? (
+        <p className="px-2 py-6 text-center font-mono text-2xs text-dim">
+          No trades for this suspect yet.
+        </p>
       ) : (
         <ol className="m-0 list-none p-0">
           {visible.map((t, i) => (

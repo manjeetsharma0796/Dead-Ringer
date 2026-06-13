@@ -4,10 +4,15 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import { Check, Download, X } from "lucide-react";
+import { formatEther } from "viem";
+import { useWriteContract } from "wagmi";
 import { SUSPECTS } from "@/lib/suspects";
 import { useStore } from "@/lib/store";
 import { fmtMnt } from "@/lib/format";
 import { useMounted } from "@/lib/useMounted";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { useReveal } from "@/lib/useReveal";
+import { ARENA_ABI, ARENA_CONTRACT, ROUND_ID } from "@/lib/arena";
 
 const STAGGER = 0.6;
 
@@ -16,26 +21,77 @@ export default function RevealPage() {
   const reduce = useReducedMotion();
   const { slip, stake, toast } = useStore();
   const [flash, setFlash] = useState(false);
+  const [claimed, setClaimed] = useState(false);
+  const [claiming, setClaiming] = useState(false);
+
+  // On-chain reveal truth + slip + payout. Falls back to mock when no contract.
+  const reveal = useReveal(SUSPECTS);
+  const { writeContractAsync } = useWriteContract();
+  const onChain = reveal.onChain;
+  const onChainLoading = onChain && reveal.loading;
 
   const results = useMemo(
     () =>
       SUSPECTS.map((s) => {
-        const entry = slip[s.id];
-        const correct = entry ? (entry.verdict === "bot") === s.isBot : null;
-        return { suspect: s, entry, correct };
+        // Ground truth: on-chain reveal when configured, mock isBot otherwise.
+        const truthRow = reveal.truth[s.id];
+        const isBot = onChain
+          ? truthRow?.revealed
+            ? !truthRow.isHuman
+            : s.isBot // not yet revealed → fall back to mock for display
+          : s.isBot;
+
+        // Player's verdict: on-chain slip when available, else local store slip.
+        const verdict = onChain
+          ? reveal.slipVerdicts[s.id]
+          : slip[s.id]?.verdict;
+        const entry = onChain
+          ? verdict
+            ? slip[s.id] ?? { suspectId: s.id, verdict, confidence: 0, multiplier: 1 }
+            : undefined
+          : slip[s.id];
+
+        const correct = verdict ? (verdict === "bot") === isBot : null;
+        return { suspect: s, entry, correct, isBot };
       }),
-    [slip],
+    [slip, reveal.truth, reveal.slipVerdicts, onChain],
   );
 
   const called = results.filter((r) => r.entry);
   const correct = called.filter((r) => r.correct);
   const perfect = called.length > 0 && correct.length === called.length;
   const per = called.length > 0 ? stake / called.length : 0;
-  const winnings = Math.round(
+  // Winnings: on-chain previewPayout (wei → MNT) when configured, else mock math.
+  const mockWinnings = Math.round(
     correct.reduce((a, r) => a + per * (r.entry?.multiplier ?? 1), 0) - stake * (called.length > 0 ? 1 : 0),
   );
+  const winnings = onChain
+    ? Math.round(Number(formatEther(reveal.payoutWei)) - (reveal.hasSlip ? stake : 0))
+    : mockWinnings;
   const accuracy = called.length > 0 ? correct.length / called.length : 0;
   const percentile = Math.min(97, Math.max(3, Math.round(100 - accuracy * 92)));
+
+  const onClaim = () => {
+    void (async () => {
+      setClaiming(true);
+      toast("Claiming winnings…", "neutral");
+      try {
+        await writeContractAsync({
+          abi: ARENA_ABI,
+          address: ARENA_CONTRACT,
+          functionName: "claim",
+          args: [ROUND_ID],
+        });
+        setClaimed(true);
+        toast("Winnings claimed.", "accent");
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Claim failed";
+        toast(msg.length > 90 ? "Claim failed or rejected." : msg, "error");
+      } finally {
+        setClaiming(false);
+      }
+    })();
+  };
 
   const totalDelay = SUSPECTS.length * STAGGER + 0.6;
 
@@ -62,8 +118,20 @@ export default function RevealPage() {
         <h1 className="type-display mt-3 text-4xl text-ink md:text-6xl">Declassifying…</h1>
       </header>
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        {results.map(({ suspect, entry, correct }, i) => (
+      {onChainLoading && (
+        <div className="mb-4 grid grid-cols-2 gap-4 md:grid-cols-4" aria-label="Reading on-chain reveal…">
+          {Array.from({ length: SUSPECTS.length }, (_, i) => (
+            <div key={i} className="space-y-3 rounded-md border border-line bg-surface p-3">
+              <Skeleton className="h-3 w-2/3" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-4 w-1/2" />
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className={`grid grid-cols-2 gap-4 md:grid-cols-4 ${onChainLoading ? "hidden" : ""}`}>
+        {results.map(({ suspect, entry, correct, isBot }, i) => (
           <motion.div
             key={suspect.id}
             initial={reduce ? false : { opacity: 0, y: 8 }}
@@ -78,10 +146,10 @@ export default function RevealPage() {
             <div className="relative mt-2 h-10">
               <div
                 className={`font-display absolute inset-0 flex items-center justify-center border-2 text-2xl ${
-                  suspect.isBot ? "border-bot text-bot" : "border-human text-human"
+                  isBot ? "border-bot text-bot" : "border-human text-human"
                 } ${reduce ? "" : "-rotate-2"}`}
               >
-                {suspect.isBot ? "BOT" : "HUMAN"}
+                {isBot ? "BOT" : "HUMAN"}
               </div>
               <motion.div
                 aria-hidden="true"
@@ -157,7 +225,17 @@ export default function RevealPage() {
                 {perfect && <span className="ml-2 text-ink">— a perfect read.</span>}
               </p>
             </div>
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-3">
+              {onChain && (
+                <button
+                  type="button"
+                  onClick={onClaim}
+                  disabled={claiming || claimed || reveal.payoutWei === BigInt(0)}
+                  className="flex cursor-pointer items-center gap-2 border border-accent bg-transparent px-5 py-2.5 font-mono text-xs uppercase tracking-widest text-accent transition-opacity duration-150 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {claimed ? "Claimed" : claiming ? "Claiming…" : "Claim winnings"}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => {
@@ -167,7 +245,7 @@ export default function RevealPage() {
                     net: winnings,
                     rows: results.map((r) => ({
                       code: r.suspect.codename.replace("SUSPECT ", ""),
-                      truth: r.suspect.isBot ? "BOT" : "HUMAN",
+                      truth: r.isBot ? "BOT" : "HUMAN",
                       hit: r.correct,
                     })),
                   });

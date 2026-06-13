@@ -1,0 +1,830 @@
+[
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "operator",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "roundId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "player",
+        "type": "address"
+      }
+    ],
+    "name": "AlreadyClaimed",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "roundId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "suspectId",
+        "type": "uint256"
+      }
+    ],
+    "name": "AlreadyRevealed",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "roundId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "suspectId",
+        "type": "uint256"
+      }
+    ],
+    "name": "CommitAlreadySet",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "roundId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "suspectId",
+        "type": "uint256"
+      }
+    ],
+    "name": "CommitMismatch",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "roundId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "suspectId",
+        "type": "uint256"
+      }
+    ],
+    "name": "CommitMissing",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "confidence",
+        "type": "uint256"
+      }
+    ],
+    "name": "ConfidenceTooHigh",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "EmptyInput",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvalidSuspectCount",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "LengthMismatch",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NoStake",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "roundId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "player",
+        "type": "address"
+      }
+    ],
+    "name": "NothingToClaim",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      }
+    ],
+    "name": "OwnableInvalidOwner",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "OwnableUnauthorizedAccount",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ReentrancyGuardReentrantCall",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "roundId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "suspectId",
+        "type": "uint256"
+      }
+    ],
+    "name": "SuspectOutOfRange",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "TransferFailed",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "roundId",
+        "type": "uint256"
+      }
+    ],
+    "name": "UnknownRound",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "roundId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "enum Arena.State",
+        "name": "expected",
+        "type": "uint8"
+      },
+      {
+        "internalType": "enum Arena.State",
+        "name": "actual",
+        "type": "uint8"
+      }
+    ],
+    "name": "WrongState",
+    "type": "error"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "player",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "roundId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "Claimed",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "previousOwner",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "newOwner",
+        "type": "address"
+      }
+    ],
+    "name": "OwnershipTransferred",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "roundId",
+        "type": "uint256"
+      }
+    ],
+    "name": "RoundLocked",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "roundId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "suspectCount",
+        "type": "uint256"
+      }
+    ],
+    "name": "RoundOpened",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "roundId",
+        "type": "uint256"
+      }
+    ],
+    "name": "RoundRevealed",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "roundId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "distributable",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "houseCut",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "totalWeight",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "bool",
+        "name": "refundMode",
+        "type": "bool"
+      }
+    ],
+    "name": "RoundSettled",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "roundId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "suspectId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "bool",
+        "name": "isHuman",
+        "type": "bool"
+      }
+    ],
+    "name": "SuspectRevealed",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "roundId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "count",
+        "type": "uint256"
+      }
+    ],
+    "name": "SuspectsRegistered",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "player",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "roundId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "count",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "stake",
+        "type": "uint256"
+      }
+    ],
+    "name": "VerdictsPlaced",
+    "type": "event"
+  },
+  {
+    "inputs": [],
+    "name": "HOUSE_EDGE_BPS",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "MAX_CONFIDENCE_BPS",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "roundId",
+        "type": "uint256"
+      }
+    ],
+    "name": "claim",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "roundId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "suspectId",
+        "type": "uint256"
+      }
+    ],
+    "name": "crowdSentiment",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "botVotePctBps",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "roundId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getPlayers",
+    "outputs": [
+      {
+        "internalType": "address[]",
+        "name": "players",
+        "type": "address[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "roundId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getRound",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "enum Arena.State",
+            "name": "state",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint256",
+            "name": "suspectCount",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "revealedCount",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "totalPot",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct Arena.RoundView",
+        "name": "view_",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "player",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "roundId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getSlip",
+    "outputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "suspectIds",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "bool[]",
+        "name": "isHumanGuess",
+        "type": "bool[]"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "confidences",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalStake",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bool",
+        "name": "exists",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "roundId",
+        "type": "uint256"
+      }
+    ],
+    "name": "lockRound",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "suspectCount",
+        "type": "uint256"
+      }
+    ],
+    "name": "openRound",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "roundId",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "owner",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "roundId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "suspectIds",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "bool[]",
+        "name": "isHumanGuess",
+        "type": "bool[]"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "confidences",
+        "type": "uint256[]"
+      }
+    ],
+    "name": "placeVerdicts",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "player",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "roundId",
+        "type": "uint256"
+      }
+    ],
+    "name": "previewPayout",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "roundId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes32[]",
+        "name": "commits",
+        "type": "bytes32[]"
+      }
+    ],
+    "name": "registerSuspects",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "renounceOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "roundId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "suspectIds",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "bool[]",
+        "name": "isHuman",
+        "type": "bool[]"
+      },
+      {
+        "internalType": "bytes32[]",
+        "name": "salt",
+        "type": "bytes32[]"
+      }
+    ],
+    "name": "reveal",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "roundCount",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "roundId",
+        "type": "uint256"
+      }
+    ],
+    "name": "settle",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "roundId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "suspectId",
+        "type": "uint256"
+      }
+    ],
+    "name": "suspectCommit",
+    "outputs": [
+      {
+        "internalType": "bytes32",
+        "name": "commit",
+        "type": "bytes32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "roundId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "suspectId",
+        "type": "uint256"
+      }
+    ],
+    "name": "suspectRevealed",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "revealed",
+        "type": "bool"
+      },
+      {
+        "internalType": "bool",
+        "name": "isHuman",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "newOwner",
+        "type": "address"
+      }
+    ],
+    "name": "transferOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+]

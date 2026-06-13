@@ -31,10 +31,34 @@ export const mantleSepoliaTestnet = {
   testnet: true,
 } as const satisfies Chain;
 
+/**
+ * Local Hardhat node (chain ID 31337). Native currency is labelled MNT so the
+ * UI's MNT formatting carries over when testing the full on-chain loop locally.
+ */
+export const hardhatLocal = {
+  id: 31337,
+  name: "Hardhat Local",
+  nativeCurrency: {
+    decimals: 18,
+    name: "MNT",
+    symbol: "MNT",
+  },
+  rpcUrls: {
+    default: {
+      http: ["http://127.0.0.1:8545"],
+    },
+    public: {
+      http: ["http://127.0.0.1:8545"],
+    },
+  },
+  testnet: true,
+} as const satisfies Chain;
+
 export const wagmiConfig = createConfig({
-  chains: [mantleSepoliaTestnet],
+  chains: [mantleSepoliaTestnet, hardhatLocal],
   connectors: [injected()],
   transports: {
     [mantleSepoliaTestnet.id]: http("https://rpc.sepolia.mantle.xyz"),
+    [hardhatLocal.id]: http("http://127.0.0.1:8545"),
   },
 });

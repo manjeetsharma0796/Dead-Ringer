@@ -1,0 +1,11 @@
+# Local screenshot dropped in for UI review
+image.png
+
+# Skill-installer artifacts (from `npx skills add ...`) — not part of the project
+.agents/
+web/.agents/
+skills-lock.json
+web/skills-lock.json
+
+# Node
+node_modules/

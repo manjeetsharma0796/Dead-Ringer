@@ -82,6 +82,8 @@
       <select id="suspectId" name="suspectId" required>
         <option value="5">Suspect 5 (human slot)</option>
         <option value="6">Suspect 6 (human slot)</option>
+        <option value="7">Suspect 7 (human slot)</option>
+        <option value="8">Suspect 8 (human slot)</option>
       </select>
     </div>
     <div>
@@ -142,8 +144,12 @@
     const proto = location.protocol === "https:" ? "wss" : "ws";
     const ws = new WebSocket(`${proto}://${location.host}/stream`);
     ws.onmessage = (e) => {
-      const { payload } = JSON.parse(e.data);
-      console.log("[stream]", payload);
+      const msg = JSON.parse(e.data);
+      if (msg.type === "history") {
+        console.log("[stream] history:", msg.payload.length, "trades");
+      } else {
+        console.log("[stream]", msg.type, msg.payload);
+      }
     };
   </script>
 </body>

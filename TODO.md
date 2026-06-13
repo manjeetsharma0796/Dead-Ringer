@@ -131,21 +131,22 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 - Acceptance: `placeVerdicts(roundId, suspectIds[], verdicts[], confidences[])` payable in MNT — one tx covers the whole slip; reverts after the round locks; stake recorded per player per suspect.
 
 ### DR-103 — Reveal + settle
-- Status: in-progress @Manjeet 2026-06-13
+- Status: done @Prithwish 2026-06-13
 - Owner: @Manjeet
 - Depends-on: DR-101
 - OS: any
 - Scope: contracts
 - Acceptance: `reveal(suspectId, isHuman, salt)` verifies against the stored commit; `settle()` computes payouts pro-rata by correct verdicts × confidence multiplier.
-- Notes: ⏳ partial — `reveal()` commit-verification shipped on `main` (`contracts/`, PR #1) with passing happy-path + wrong-salt + flipped-bit tests. `settle()` is a stub that reverts `DR-104: payout model not specified` — the payout half is blocked on the economic spec (parimutuel vs house-banked). Finish when DR-104 unblocks.
+- Notes: ✅ DONE — economic model decided (**parimutuel + 4% house edge**) and `settle()` implemented (`contracts/Arena.sol`): weight = `stake × (confidence on correct ÷ total confidence)`, pro-rata to winners. Proven on a live local node (dryRun.ts): sharp detective claims 1.92 of a 2 MNT pot. Done as part of the integration wave (picked outside lane to unblock the loop).
 
 ### DR-104 — claim() + house-edge skim
-- Status: pending
+- Status: done @Prithwish 2026-06-13
 - Owner: @Manjeet
 - Depends-on: DR-102, DR-103
 - OS: any
 - Scope: contracts
 - Acceptance: winners pull payouts via `claim()`; a simple house-edge skim accrues to the protocol (story point: protocol revenue).
+- Notes: ✅ DONE — `claim()` is pull-payment, one-per-player, `nonReentrant`; **4% house edge** skims to the operator on `settle()` (the revenue story). Nobody-correct → refund mode (everyone reclaims stake). Verified: double-claim reverts, claim-before-settle reverts. 25 contract tests green.
 
 ### DR-105 — Happy-path test suite
 - Status: done @Manjeet 2026-06-13
@@ -157,36 +158,40 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 - Notes: ✅ shipped on `main` (PR #1) — Hardhat+chai, 16 tests passing: full lifecycle (open→register→stake→lock→reveal) asserting events + escrow, wrong-salt + flipped-bit reveal reverts, and settle/claim stub reverts. (`claim` itself is stubbed — DR-104.) Depends-on corrected from DR-104 (was inverted).
 
 ### DR-106 — Deploy to Mantle Sepolia + verify
-- Status: pending
+- Status: pending — **READY, blocked only on a funded wallet (DR-402)**
 - Owner: @Manjeet
 - Depends-on: DR-105, DR-402
 - OS: any
 - Scope: deploy
 - Acceptance: contracts live on Mantle Sepolia (chainId 5003); addresses saved where web/agents read them (env + a `deployments` note); source verified on the explorer — **submission requires the contract address**.
+- Notes: ⚠️ Everything is wired: `deploy.ts` exports the ABI to `web/` and writes `deployments/mantleSepolia.json`; `npx hardhat verify` is configured. **One human action remains** — faucet MNT into a deployer key, put it in `contracts/.env` as `PRIVATE_KEY`, then `npm run deploy:mantleSepolia`. Full steps in [RUN.md](RUN.md) §B. The whole loop already runs on a local node end-to-end.
 
 ### DR-107 — Crowd-sentiment view function
-- Status: pending
+- Status: done @Prithwish 2026-06-13
 - Owner: @Manjeet
 - Depends-on: DR-102
 - OS: any
 - Scope: contracts
 - Acceptance: view function returns per-suspect % of bot votes for the UI's crowd-sentiment bar.
+- Notes: ✅ `crowdSentiment(roundId, suspectId)` returns bot-vote % in bps (tallied in `placeVerdicts`). Plus `previewPayout(player, roundId)` for the reveal page.
 
 ### DR-108 — Settlement edge cases
-- Status: pending
+- Status: done @Prithwish 2026-06-13
 - Owner: @Manjeet
 - Depends-on: DR-103
 - OS: any
 - Scope: contracts
 - Acceptance: nobody-correct → stake rolls over; ties → split. Covered by a test each.
+- Notes: ✅ nobody-correct → **refund mode** (everyone reclaims their stake — chose refund over cross-round rollover for single-demo safety); ties split naturally by parimutuel weight. Tests cover both.
 
 ### DR-109 — Scripted round-runner
-- Status: pending
+- Status: done @Prithwish 2026-06-13
 - Owner: @Manjeet
 - Depends-on: DR-106
 - OS: any
 - Scope: ops
 - Acceptance: one command opens a round, registers suspect commits, and later reveals — `@Jishnu` runs this live in the demo without touching a console mid-pitch.
+- Notes: ✅ `contracts/scripts/seedRound.ts` (open + register 8 suspects, persist salts) and `revealRound.ts` (lock + reveal + settle). Plus `dryRun.ts` (full bet→claim loop). Run on any network via `--network <net>`; proven on localhost. Works on Mantle Sepolia once DR-106 deploys.
 
 ### DR-110 — Explorer polish + NatSpec
 - Status: pending
@@ -227,7 +232,7 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 - Notes: ✅ shipped on `main` — `agents/src/bots/{quant,degen,sleeper,paperHands}.ts` + `support.ts` (price tracker / position mirror) + `index.ts` registry (`createBots`), wired in `src/index.ts`. The `Order`/runner now support `close:true` so stop-losses & fat-finger corrections emit clean close trades. Cut #3 honored via `DISABLE_PAPER_HANDS` env (→ 3 bots). **The Degen ships a deterministic heuristic** that reproduces the FOMO/revenge/oversize fingerprint — the Z.AI/LLM brain is a documented hook behind `ZAI_API_KEY`, still **blocked on DR-201** credits; swap is interface-compatible. 8 `node:test` unit tests cover every behavioral branch (injectable rng/clock); smoke-boot registers all 4 bots on :3101. Cut #3 — if behind, set `DISABLE_PAPER_HANDS=true`.
 
 ### DR-204 — Human trader slots + admin page
-- Status: pending
+- Status: done @Prithwish 2026-06-13
 - Owner: @Prithwish
 - Depends-on: DR-202
 - OS: any
@@ -243,7 +248,7 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 - Acceptance: websocket (or polling) endpoint on :3101 streaming trades to the frontend; event names match the integration contract frozen in DR-404.
 
 ### DR-206 — Bots running continuously
-- Status: pending
+- Status: done @Prithwish 2026-06-13
 - Owner: @Prithwish
 - Depends-on: DR-203
 - OS: any
@@ -362,12 +367,13 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 - Notes: Cut #1 — falls back to a static mock image. Check the `web/` app on `main` first: the reveal page already renders a share canvas (DR-308 note) — extend that rather than starting fresh.
 
 ### DR-310 — Swap mocks → real feed + contracts
-- Status: pending
+- Status: done @Prithwish 2026-06-13
 - Owner: @Mouli
 - Depends-on: DR-306, DR-205, DR-106
 - OS: any
 - Scope: web, api
 - Acceptance: frontend reads the real websocket feed and performs real contract reads/writes on Mantle Sepolia; `mockData.ts` no longer on the demo path. Integration phase — `@Jishnu` coordinates, `@Mouli` executes.
+- Notes: ✅ wired (`web/src/lib/useTradeFeed.ts` ws + history, `useSuspectStats.ts` GET /suspects, `useReveal.ts` on-chain reads; GuessSlip→`placeVerdicts`, reveal→`claim`). `arena.ts` centralizes id (1-idx↔0-idx)/confidence→bps/verdict conversions. **Graceful fallback to mocks** when `NEXT_PUBLIC_ARENA_ADDRESS` unset (never white-screens). Proven against a live local node; on Mantle Sepolia it's **one env var away** once DR-106 deploys. See RUN.md.
 
 ### DR-311 — Leaderboard page
 - Status: in-progress @Mouli 2026-06-12
@@ -387,13 +393,13 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 - Acceptance: arena, guess slip, and reveal ceremony usable on mobile.
 
 ### DR-313 — Loading/empty/error states
-- Status: pending
+- Status: done @Prithwish 2026-06-13
 - Owner: @Mouli
 - Depends-on: DR-410
 - OS: any
 - Scope: web
 - Acceptance: loading skeletons, empty states, and error toasts on every screen in the demo path.
-- Notes: `Skeleton.tsx` + `Toasts.tsx` primitives already exist on `main` (under `web/`) — this task is applying them across the demo path, not building them.
+- Notes: ✅ applied across the demo path during integration — feed/stats/on-chain-read skeletons, "waiting for trades" empty state, error toasts on ws/contract failure (reusing `Skeleton.tsx` + `Toasts.tsx`). Folded into DR-310's wiring.
 
 ### DR-314 — Landing page final polish
 - Status: pending
@@ -479,6 +485,7 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 - OS: any
 - Scope: ops
 - Acceptance: open round → 3 wallets place slips → lock → reveal → claim, end-to-end on Mantle Sepolia. Fix until this loop is bulletproof — `@Manjeet` on contract bugs, `@Prithwish` on feed bugs.
+- Notes: ✅ proven **on a local Hardhat node** via `contracts/scripts/dryRun.ts` (2 wallets bet → lock → reveal → settle → claim; sharp detective claims 1.92 of a 2 MNT pot, fooled player 0, 4% edge to operator). The Mantle Sepolia run is the same commands `--network mantleSepolia` once DR-106 deploys.
 
 ### DR-410 — CHECKPOINT 2 — FEATURE FREEZE (hours 16–17)
 - Status: pending
@@ -607,6 +614,10 @@ Prep during the buffer hour, use on stage: put two live trade feeds on screen. A
 
 _Done this sprint (blocks flipped in place, newest first):_
 
+- **DR-103/104/107/108** @Prithwish — parimutuel `settle`/`claim` + 4% house edge, crowd-sentiment, edge cases (`contracts/`); 25 tests + live-node dry-run
+- **DR-109** @Prithwish — round-runner scripts: `seedRound`/`revealRound`/`dryRun` (`contracts/scripts/`)
+- **DR-310/313** @Prithwish — web wired to real ws feed + Arena contract, graceful mock fallback, loading/error states (`web/`)
+- **DR-204/206** @Prithwish — agents CORS + ws history for the browser; bots run continuously (`agents/`)
 - **DR-502** @Prithwish — ratified round params: 8 suspects (4 bots / 4 humans), `SUSPECT_COUNT=8`
 - **DR-203** @Prithwish — bot personalities ×4 (Quant/Degen/Sleeper/PaperHands), 8 unit tests (`agents/`)
 - **DR-401** @Jishnu — root README: monorepo architecture + run instructions (PR #6)
@@ -616,7 +627,7 @@ _Done this sprint (blocks flipped in place, newest first):_
 - **DR-205 / DR-202** @Prithwish — trade simulator + feed + websocket stream (`agents/`, PR #2)
 - **DR-105 / DR-102 / DR-101** @Manjeet — Arena commit-reveal contracts + 16 tests (`contracts/`, PR #1)
 
-_Bookkeeping: during the sprint, completed blocks are flipped to `done` in place (not physically relocated) so section + owner structure stays stable; a closing sweep can relocate them. DR-103 stays in-progress — reveal shipped, settle blocked on DR-104._
+_Bookkeeping: during the sprint, completed blocks are flipped to `done` in place (not physically relocated) so section + owner structure stays stable; a closing sweep can relocate them. The full on-chain loop (commit → stake → reveal → settle → claim) is now implemented and proven on a local node; the only thing between here and a live Mantle Sepolia demo is DR-106 (deploy), which needs a funded wallet (DR-402)._
 
 ## Blocked
 

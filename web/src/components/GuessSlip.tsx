@@ -3,9 +3,20 @@
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown, ChevronUp, X } from "lucide-react";
+import { parseEther } from "viem";
+import { useWriteContract } from "wagmi";
 import { useStore } from "@/lib/store";
 import { suspectById } from "@/lib/suspects";
 import { fmtMnt, fmtMult } from "@/lib/format";
+import { arenaConfigured } from "@/lib/env";
+import {
+  ARENA_ABI,
+  ARENA_CONTRACT,
+  ROUND_ID,
+  isHumanGuess,
+  toBps,
+  toContractId,
+} from "@/lib/arena";
 
 /*
  * The guess slip. Docked panel bottom-right on desktop,
@@ -26,6 +37,8 @@ export function GuessSlip() {
     toast,
   } = useStore();
   const [stakeRaw, setStakeRaw] = useState(String(stake));
+  const [submitting, setSubmitting] = useState(false);
+  const { writeContractAsync } = useWriteContract();
 
   const entries = useMemo(() => Object.values(slip), [slip]);
   const count = entries.length;
@@ -55,7 +68,41 @@ export function GuessSlip() {
       toast("Stake exceeds wallet balance. Reduce stake or top up.", "error");
       return;
     }
-    lockSlip(); // optimistic — slip stamps immediately
+
+    // Mock mode (no contract configured): keep the optimistic demo behavior.
+    if (!arenaConfigured()) {
+      lockSlip();
+      return;
+    }
+
+    // On-chain mode: one tx places every verdict, sharing one MNT stake.
+    // Id indexing + confidence conversion are centralized in lib/arena.ts.
+    void (async () => {
+      setSubmitting(true);
+      toast("Submitting verdicts on-chain…", "neutral");
+      try {
+        const suspectIds = entries.map((e) => toContractId(e.suspectId));
+        const humanGuesses = entries.map((e) => isHumanGuess(e.verdict));
+        const confidencesBps = entries.map((e) => toBps(e.confidence));
+
+        await writeContractAsync({
+          abi: ARENA_ABI,
+          address: ARENA_CONTRACT,
+          functionName: "placeVerdicts",
+          args: [ROUND_ID, suspectIds, humanGuesses, confidencesBps],
+          value: parseEther(String(stake)),
+        });
+
+        lockSlip();
+        toast("Verdicts confirmed on-chain.", "accent");
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Transaction failed";
+        toast(msg.length > 90 ? "Transaction failed or rejected." : msg, "error");
+        // Do NOT lock on failure.
+      } finally {
+        setSubmitting(false);
+      }
+    })();
   };
 
   const panel = (
@@ -163,10 +210,12 @@ export function GuessSlip() {
           <button
             type="button"
             onClick={onLock}
-            disabled={count === 0 || stakeInvalid}
+            disabled={count === 0 || stakeInvalid || submitting}
             className="w-full cursor-pointer bg-accent py-2.5 font-mono text-xs uppercase tracking-widest text-black transition-opacity duration-150 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Lock verdicts{count > 0 ? ` (${count})` : ""}
+            {submitting
+              ? "Confirming…"
+              : `Lock verdicts${count > 0 ? ` (${count})` : ""}`}
           </button>
         )}
       </div>

@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { DossierCard, type Density } from "@/components/DossierCard";
 import { SuspectDrawer } from "@/components/SuspectDrawer";
 import { TradeTape } from "@/components/TradeTape";
+import { useSuspectsWithStats } from "@/lib/useSuspectStats";
 
 type SortKey = "pnl" | "vol" | "uncertain";
 
@@ -29,19 +30,26 @@ export default function ArenaPage() {
   const [hovered, setHovered] = useState<number | null>(null);
   const [tapeFilter, setTapeFilter] = useState<number | null>(null);
 
+  // Overlay real backend stats onto the presentational suspects (DR-313:
+  // keeps mock stats on fetch failure). Cosmetic fields stay deterministic.
+  const { suspects, status: statsStatus } = useSuspectsWithStats(SUSPECTS);
+
   useEffect(() => {
     const t = setTimeout(() => setLoading(false), 500);
     return () => clearTimeout(t);
   }, []);
 
+  // Show the loading grid until the min-delay elapses AND stats resolve.
+  const showLoading = loading || statsStatus === "loading";
+
   const sorted = useMemo(() => {
-    const arr = [...SUSPECTS];
+    const arr = [...suspects];
     if (sort === "pnl") arr.sort((a, b) => b.returnPct - a.returnPct);
     if (sort === "vol") arr.sort((a, b) => b.stats.volatility - a.stats.volatility);
     if (sort === "uncertain")
       arr.sort((a, b) => Math.abs(a.crowdBotPct - 50) - Math.abs(b.crowdBotPct - 50));
     return arr;
-  }, [sort]);
+  }, [sort, suspects]);
 
   const togglePin = (id: number) => {
     setPins((p) => {
@@ -52,7 +60,7 @@ export default function ArenaPage() {
   };
 
   const pinned = pins
-    .map((id) => SUSPECTS.find((s) => s.id === id))
+    .map((id) => suspects.find((s) => s.id === id))
     .filter(Boolean) as Suspect[];
 
   return (
@@ -71,7 +79,7 @@ export default function ArenaPage() {
             detectives <span className="font-bold text-ink">{ROUND.detectives}</span>
           </span>
           <span className="text-dim">
-            suspects <span className="font-bold text-ink">{SUSPECTS.length}</span>
+            suspects <span className="font-bold text-ink">{suspects.length}</span>
           </span>
         </div>
       </div>
@@ -129,7 +137,7 @@ export default function ArenaPage() {
             <ComparePanel a={pinned[0]} b={pinned[1]} onClear={() => setPins([])} />
           )}
 
-          {loading ? (
+          {showLoading ? (
             <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2" aria-label="Loading suspects">
               {Array.from({ length: 8 }, (_, i) => (
                 <div key={i} className="space-y-2 rounded-md border border-line bg-surface p-2.5">
@@ -179,7 +187,7 @@ export default function ArenaPage() {
             </div>
             <div className="px-2.5 pb-1.5 pt-1">
               <TradeTape
-                suspects={SUSPECTS}
+                suspects={suspects}
                 rows={32}
                 filterSuspect={tapeFilter}
                 onHoverSuspect={setHovered}

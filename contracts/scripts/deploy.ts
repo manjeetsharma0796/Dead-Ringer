@@ -1,6 +1,7 @@
 import { ethers, network } from "hardhat";
 import { writeFileSync, mkdirSync, existsSync } from "fs";
 import { join } from "path";
+import { exportArenaAbi } from "./exportAbi";
 
 /**
  * Deploys the Arena contract to the active Hardhat network and records the
@@ -58,6 +59,10 @@ async function main() {
   const outFile = join(deploymentsDir, `${network.name}.json`);
   writeFileSync(outFile, JSON.stringify(record, null, 2) + "\n");
   console.log(`\nWrote deployment record to: ${outFile}`);
+
+  // Also publish the ABI to the frontend so web and contracts stay in sync.
+  const abiFile = exportArenaAbi();
+  console.log(`Wrote Arena ABI to:         ${abiFile}`);
 }
 
 main().catch((error) => {

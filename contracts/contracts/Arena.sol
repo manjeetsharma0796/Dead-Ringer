@@ -124,6 +124,35 @@ contract Arena is Ownable, ReentrancyGuard {
     /// @dev roundId => player => slip.
     mapping(uint256 => mapping(address => Slip)) private _slips;
 
+    // --- Settlement (DR-104): parimutuel with a 4% house edge ------------
+
+    /// @notice House edge taken from the pot at settlement, in basis points (4%).
+    uint256 public constant HOUSE_EDGE_BPS = 400;
+
+    /// @dev roundId => ordered list of unique players who bet in the round.
+    mapping(uint256 => address[]) private _players;
+
+    /// @dev roundId => suspectId => number of BOT guesses (isHumanGuess == false).
+    mapping(uint256 => mapping(uint256 => uint256)) private _botVotes;
+
+    /// @dev roundId => suspectId => total guesses cast on that suspect.
+    mapping(uint256 => mapping(uint256 => uint256)) private _totalVotes;
+
+    /// @dev roundId => player => settlement weight (stake-weighted accuracy).
+    mapping(uint256 => mapping(address => uint256)) private _weight;
+
+    /// @dev roundId => sum of all players' weights (parimutuel denominator).
+    mapping(uint256 => uint256) private _totalWeight;
+
+    /// @dev roundId => MNT (wei) distributable to winners after the house edge.
+    mapping(uint256 => uint256) private _distributable;
+
+    /// @dev roundId => true when nobody scored, so claim() refunds stakes 1:1.
+    mapping(uint256 => bool) private _refundMode;
+
+    /// @dev roundId => player => whether they have already claimed.
+    mapping(uint256 => mapping(address => bool)) private _claimed;
+
     // ---------------------------------------------------------------------
     // Events
     // ---------------------------------------------------------------------
@@ -150,6 +179,26 @@ contract Arena is Ownable, ReentrancyGuard {
     /// @notice Emitted when every suspect in a round has been revealed.
     event RoundRevealed(uint256 indexed roundId);
 
+    /// @notice Emitted when the operator settles a round and scores payouts.
+    /// @param roundId       The settled round.
+    /// @param distributable MNT (wei) available to winners after the house edge.
+    /// @param houseCut      MNT (wei) taken as the house edge (0 in refund mode).
+    /// @param totalWeight   Sum of all players' winning weights (0 => refund mode).
+    /// @param refundMode    True when nobody scored and stakes are refunded 1:1.
+    event RoundSettled(
+        uint256 indexed roundId,
+        uint256 distributable,
+        uint256 houseCut,
+        uint256 totalWeight,
+        bool refundMode
+    );
+
+    /// @notice Emitted when a player withdraws their winnings or refund.
+    /// @param player  The claimant.
+    /// @param roundId Round claimed from.
+    /// @param amount  MNT (wei) paid out.
+    event Claimed(address indexed player, uint256 indexed roundId, uint256 amount);
+
     // ---------------------------------------------------------------------
     // Errors
     // ---------------------------------------------------------------------
@@ -166,6 +215,9 @@ contract Arena is Ownable, ReentrancyGuard {
     error CommitMismatch(uint256 roundId, uint256 suspectId);
     error ConfidenceTooHigh(uint256 confidence);
     error NoStake();
+    error AlreadyClaimed(uint256 roundId, address player);
+    error NothingToClaim(uint256 roundId, address player);
+    error TransferFailed();
 
     // ---------------------------------------------------------------------
     // Construction
@@ -339,10 +391,21 @@ contract Arena is Ownable, ReentrancyGuard {
         }
 
         Slip storage slip = _slips[roundId][msg.sender];
+        // Register the player on their first bet for this round (one entry only).
+        if (!slip.exists) {
+            _players[roundId].push(msg.sender);
+        }
         for (uint256 i = 0; i < n; ++i) {
             slip.suspectIds.push(suspectIds[i]);
             slip.isHumanGuess.push(isHumanGuess[i]);
             slip.confidences.push(confidences[i]);
+
+            // Tally crowd sentiment: a BOT guess is isHumanGuess[i] == false.
+            uint256 id = suspectIds[i];
+            if (!isHumanGuess[i]) {
+                _botVotes[roundId][id] += 1;
+            }
+            _totalVotes[roundId][id] += 1;
         }
         slip.totalStake += msg.value;
         slip.exists = true;
@@ -353,53 +416,117 @@ contract Arena is Ownable, ReentrancyGuard {
     }
 
     // ---------------------------------------------------------------------
-    // Settlement — STUBS (DR-104)
+    // Settlement (DR-104): parimutuel with a 4% house edge
     // ---------------------------------------------------------------------
 
     /**
-     * @notice Scores a revealed round and prepares payouts.
+     * @notice Scores a revealed round and prepares parimutuel payouts.
      *
-     * @dev !!! STUB — NOT YET IMPLEMENTED (DR-104) !!!
+     * @dev Operator only; round must be `Revealed`, transitions to `Settled`.
      *
-     *      The economic model for Dead Ringer is not finalized. It is undecided
-     *      whether payouts are parimutuel (winners split the losers' pot pro-rata
-     *      to stake and confidence) or house-banked (fixed odds against a bankroll),
-     *      and the exact scoring formula — how confidence in basis points maps to
-     *      reward, how ties/duplicates resolve, and what fee (if any) the house
-     *      takes — has not been specified.
+     *      Payout model — PARIMUTUEL with a {HOUSE_EDGE_BPS} (4%) house edge:
+     *        - distributable = totalPot * (10000 - 400) / 10000; the remainder is
+     *          the house cut.
+     *        - Each player earns a `weight`:
+     *              weight = totalStake * (sum of confidence on CORRECT guesses)
+     *                                  / (sum of confidence on ALL guesses)
+     *          A guess `i` is correct when isHumanGuess[i] == suspect.isHuman
+     *          (the revealed truth). A player with zero total confidence gets
+     *          weight 0 (divide-by-zero guard).
+     *        - claim() pays distributable * weight[player] / totalWeight, so ties
+     *          resolve automatically pro-rata with no special case.
      *
-     *      To avoid distributing escrowed MNT under an unspecified rule, this
-     *      function intentionally reverts. The signature is frozen so the ABI is
-     *      forward-compatible: implementing DR-104 will fill in this body without
-     *      changing how off-chain code calls it.
+     *      Edge case — NOBODY CORRECT (totalWeight == 0): the round enters
+     *      `refundMode`, the house takes nothing, and claim() refunds each player
+     *      exactly their own `totalStake`.
      *
-     *      Intended (future) preconditions: round in `Revealed`, operator-gated,
-     *      transition to `Settled`.
-     *
-     * @param roundId The round to settle. Currently unused.
+     * @param roundId The round to settle.
      */
-    function settle(uint256 roundId) external nonReentrant {
-        roundId; // silence unused-parameter warning while stubbed
-        revert("DR-104: payout model not specified");
+    function settle(uint256 roundId) external onlyOwner nonReentrant {
+        _requireState(roundId, State.Revealed);
+        _state[roundId] = State.Settled;
+
+        uint256 totalPot = _totalPot[roundId];
+        uint256 distributable = (totalPot * (MAX_CONFIDENCE_BPS - HOUSE_EDGE_BPS)) / MAX_CONFIDENCE_BPS;
+        uint256 houseCut = totalPot - distributable;
+
+        address[] storage players = _players[roundId];
+        uint256 totalWeight;
+
+        for (uint256 p = 0; p < players.length; ++p) {
+            address player = players[p];
+            Slip storage slip = _slips[roundId][player];
+
+            uint256 sumCorrect;
+            uint256 sumAll;
+            uint256 m = slip.suspectIds.length;
+            for (uint256 i = 0; i < m; ++i) {
+                uint256 c = slip.confidences[i];
+                sumAll += c;
+                if (slip.isHumanGuess[i] == _suspects[roundId][slip.suspectIds[i]].isHuman) {
+                    sumCorrect += c;
+                }
+            }
+
+            uint256 w = sumAll == 0 ? 0 : (slip.totalStake * sumCorrect) / sumAll;
+            _weight[roundId][player] = w;
+            totalWeight += w;
+        }
+
+        _totalWeight[roundId] = totalWeight;
+
+        if (totalWeight == 0) {
+            // Nobody scored: refund stakes 1:1, house takes nothing.
+            _refundMode[roundId] = true;
+            _distributable[roundId] = 0;
+            emit RoundSettled(roundId, 0, 0, 0, true);
+        } else {
+            _distributable[roundId] = distributable;
+            emit RoundSettled(roundId, distributable, houseCut, totalWeight, false);
+            if (houseCut > 0) {
+                (bool ok, ) = payable(owner()).call{value: houseCut}("");
+                if (!ok) revert TransferFailed();
+            }
+        }
     }
 
     /**
-     * @notice Withdraws a player's winnings (and/or stake) for a settled round.
+     * @notice Withdraws a player's parimutuel winnings (or refund) for a round.
      *
-     * @dev !!! STUB — NOT YET IMPLEMENTED (DR-104) !!!
+     * @dev Round must be `Settled`. Pull-payment, `nonReentrant`, one claim per
+     *      player per round.
+     *        - In refund mode: payout = the player's own `totalStake`.
+     *        - Otherwise: payout = distributable * weight[player] / totalWeight.
+     *      Reverts {NothingToClaim} when the payout is zero, and
+     *      {AlreadyClaimed} on a second claim.
      *
-     *      Depends entirely on the payout model chosen in {settle}, which is still
-     *      open (parimutuel vs house-banked, fee policy, refund-on-void rules).
-     *      Until that is specified this function reverts so no escrowed MNT can
-     *      leave the contract. The signature is frozen for ABI forward-compat:
-     *      implementing DR-104 will fill in this body — pull-payment, `nonReentrant`,
-     *      one claim per player per round — without changing the call shape.
-     *
-     * @param roundId The round to claim from. Currently unused.
+     * @param roundId The round to claim from.
      */
     function claim(uint256 roundId) external nonReentrant {
-        roundId; // silence unused-parameter warning while stubbed
-        revert("DR-104: payout model not specified");
+        _requireState(roundId, State.Settled);
+        if (_claimed[roundId][msg.sender]) revert AlreadyClaimed(roundId, msg.sender);
+
+        uint256 payout = _payoutOf(roundId, msg.sender);
+        if (payout == 0) revert NothingToClaim(roundId, msg.sender);
+
+        _claimed[roundId][msg.sender] = true;
+
+        (bool ok, ) = payable(msg.sender).call{value: payout}("");
+        if (!ok) revert TransferFailed();
+
+        emit Claimed(msg.sender, roundId, payout);
+    }
+
+    /// @dev Computes the gross payout owed to `player` for a settled round
+    ///      (ignores the already-claimed flag). 0 if not settled.
+    function _payoutOf(uint256 roundId, address player) private view returns (uint256) {
+        if (_state[roundId] != State.Settled) return 0;
+        if (_refundMode[roundId]) {
+            return _slips[roundId][player].totalStake;
+        }
+        uint256 totalWeight = _totalWeight[roundId];
+        if (totalWeight == 0) return 0;
+        return (_distributable[roundId] * _weight[roundId][player]) / totalWeight;
     }
 
     // ---------------------------------------------------------------------
@@ -477,6 +604,51 @@ contract Arena is Ownable, ReentrancyGuard {
         _requireRound(roundId);
         if (suspectId >= _suspectCount[roundId]) revert SuspectOutOfRange(roundId, suspectId);
         return _suspects[roundId][suspectId].commit;
+    }
+
+    /**
+     * @notice Crowd sentiment for a suspect: the share of guesses that called it
+     *         a BOT, in basis points (DR-107).
+     * @dev Returns 0 when no guesses have been cast on the suspect.
+     * @param roundId   Target round.
+     * @param suspectId Suspect id (must be in range).
+     * @return botVotePctBps botVotes * 10000 / totalVotes (0 if no votes).
+     */
+    function crowdSentiment(uint256 roundId, uint256 suspectId)
+        external
+        view
+        returns (uint256 botVotePctBps)
+    {
+        _requireRound(roundId);
+        if (suspectId >= _suspectCount[roundId]) revert SuspectOutOfRange(roundId, suspectId);
+        uint256 total = _totalVotes[roundId][suspectId];
+        if (total == 0) return 0;
+        return (_botVotes[roundId][suspectId] * MAX_CONFIDENCE_BPS) / total;
+    }
+
+    /**
+     * @notice What {claim} would currently pay `player` for a round.
+     * @dev Safe to call in any state. Returns 0 if the round is not `Settled`,
+     *      the player has already claimed, or they are owed nothing.
+     * @param player  The bettor to look up.
+     * @param roundId Target round.
+     * @return payout MNT (wei) claimable now.
+     */
+    function previewPayout(address player, uint256 roundId) external view returns (uint256) {
+        if (roundId == 0 || roundId > roundCount) return 0;
+        if (_state[roundId] != State.Settled) return 0;
+        if (_claimed[roundId][player]) return 0;
+        return _payoutOf(roundId, player);
+    }
+
+    /**
+     * @notice The ordered list of unique players who bet in a round.
+     * @param roundId Target round (must exist).
+     * @return players Player addresses, in first-bet order.
+     */
+    function getPlayers(uint256 roundId) external view returns (address[] memory players) {
+        _requireRound(roundId);
+        return _players[roundId];
     }
 
     // ---------------------------------------------------------------------
