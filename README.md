@@ -2,7 +2,7 @@
 
 **Spot the bot trader.** An on-chain inverted Turing test, built on Mantle.
 
-Six suspects trade live against real price feeds. Some are humans, some are bots
+Eight suspects trade live against real price feeds. Some are humans, some are bots
 built to trade *believably*. You watch the anonymized feeds, bet **HUMAN** or
 **BOT** on each suspect with a confidence level, and stake MNT on your read.
 Identities are committed on-chain up front and revealed at the end — so the
@@ -81,16 +81,27 @@ Built to demo one flawless round end-to-end. What's live vs. pending:
 
 | Area | State |
 |---|---|
-| Commit-reveal contract (lifecycle, registry, escrow, reveal) | ✅ on `main`, 16 tests |
+| Commit-reveal contract (lifecycle, registry, escrow, reveal) | ✅ deployed + Sourcify-verified · 25 tests |
 | Wallet on Mantle Sepolia (wagmi/viem) | ✅ on `main` |
 | Trade simulator + price feed + websocket stream | ✅ on `main` |
 | Per-suspect behavioral tells | ✅ on `main` |
 | Demo script + storyboard | ✅ on `main` |
-| **Payout math** (`settle`/`claim`) | ⏳ stubbed — pending the economic-model spec (DR-104) |
-| **Bot personalities** | ⏳ harness shipped, strategies pending (DR-203) |
-| Testnet deploy + verified addresses | ⏳ pending funded wallets (DR-402/DR-106) |
+| **Payout math** (`settle`/`claim`) | ✅ parimutuel · 4% house edge (DR-104) |
+| **Bot personalities** | ✅ Quant / Degen / Sleeper / Paper Hands (DR-203) |
+| Testnet deploy + verified address | ✅ live on Mantle Sepolia + Sourcify (DR-106) |
 
-Contract addresses: _TBD once DR-106 deploys to Mantle Sepolia._
+## Contract address
+
+**Arena** — Mantle Sepolia (chainId 5003):
+
+[`0x1190506A196A0598416B0673F84071C6BC7C63A1`](https://explorer.sepolia.mantle.xyz/address/0x1190506A196A0598416B0673F84071C6BC7C63A1)
+
+- Operator: `0x7176DC1B76a17BB502324Dd825EaB983F675DD7a`
+- Deploy tx: [`0x667777…f374016`](https://explorer.sepolia.mantle.xyz/tx/0x667777ab186949941975c38705ee326a3b9c556f2e4f848c7bcf88360f374016)
+- Source: verified on [Sourcify — full match](https://repo.sourcify.dev/contracts/full_match/5003/0x1190506A196A0598416B0673F84071C6BC7C63A1/)
+- Record: [`contracts/deployments/mantleSepolia.json`](contracts/deployments/mantleSepolia.json)
+
+Set `NEXT_PUBLIC_ARENA_ADDRESS` to this address to switch the web app from mock mode to live on-chain verdicts + reveal.
 
 ## Team
 

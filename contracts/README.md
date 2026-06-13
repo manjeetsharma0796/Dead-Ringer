@@ -10,6 +10,10 @@ round settles and pays out.
 
 The core contract is [`contracts/Arena.sol`](contracts/Arena.sol).
 
+## Deployed
+
+**Mantle Sepolia** (chainId 5003): [`0x1190506A196A0598416B0673F84071C6BC7C63A1`](https://explorer.sepolia.mantle.xyz/address/0x1190506A196A0598416B0673F84071C6BC7C63A1) — operator `0x7176DC1B76a17BB502324Dd825EaB983F675DD7a`, source verified on [Sourcify (full match)](https://repo.sourcify.dev/contracts/full_match/5003/0x1190506A196A0598416B0673F84071C6BC7C63A1/). Deploy tx `0x667777ab186949941975c38705ee326a3b9c556f2e4f848c7bcf88360f374016`. Full record: [`deployments/mantleSepolia.json`](deployments/mantleSepolia.json).
+
 ## Round lifecycle
 
 `enum State { Open, Locked, Revealed, Settled }`

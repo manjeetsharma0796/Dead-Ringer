@@ -2,7 +2,8 @@ import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import * as dotenv from "dotenv";
 
-dotenv.config();
+// Load .env.local first (preferred, gitignored), then .env as a fallback.
+dotenv.config({ path: [".env.local", ".env"] });
 
 const MANTLE_SEPOLIA_RPC =
   process.env.MANTLE_SEPOLIA_RPC || "https://rpc.sepolia.mantle.xyz";
@@ -43,6 +44,9 @@ const config: HardhatUserConfig = {
         },
       },
     ],
+  },
+  sourcify: {
+    enabled: true,
   },
 };
 
