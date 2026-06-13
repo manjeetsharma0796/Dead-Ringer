@@ -23,10 +23,12 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
  *      5. The operator reveals each suspect's true identity by supplying the
  *         pre-image of the commitment; the contract verifies the hash matches
  *         (`reveal`).
- *      6. Once the economic model is finalized (DR-104), `settle` scores the
- *         round and `claim` lets winners withdraw. Both are STUBS today — see the
- *         NatSpec on each — and revert so no funds can be paid out under an
- *         unspecified formula.
+ *      6. After reveal, `settle` scores the round and `claim` lets winners
+ *         withdraw. Scoring is PARIMUTUEL with a 4% house edge (DR-104): each
+ *         player's weight is their stake times the share of their confidence
+ *         spent on CORRECT guesses, and the post-edge pot is split pro-rata by
+ *         weight. If nobody is correct the round enters refund mode and every
+ *         player reclaims their exact stake.
  *
  *      Identity commitment scheme:
  *          identityCommit = keccak256(abi.encode(bool isHuman, bytes32 salt))

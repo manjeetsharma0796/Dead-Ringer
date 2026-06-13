@@ -21,26 +21,31 @@ The core contract is [`contracts/Arena.sol`](contracts/Arena.sol).
 | Place a bet + escrow MNT | `placeVerdicts(roundId, ids[], guesses[], confidences[])` payable | anyone | `Open` |
 | Close betting | `lockRound(roundId)` | operator | `Open` → `Locked` |
 | Reveal identities | `reveal(roundId, ids[], isHuman[], salt[])` | operator | `Locked` → `Revealed` (when all revealed) |
-| Score the round | `settle(roundId)` | — | **stub (DR-104)** |
-| Withdraw winnings | `claim(roundId)` | — | **stub (DR-104)** |
+| Score the round | `settle(roundId)` | operator | `Revealed` → `Settled` |
+| Withdraw winnings | `claim(roundId)` | anyone | `Settled` (pull payment) |
 
 Confidences are in **basis points** (`0..10000`, i.e. `10000` = 100.00%).
 
 Read-only views: `getRound`, `getSlip(player, roundId)`,
-`suspectRevealed(roundId, id)`, and `suspectCommit(roundId, id)`.
+`suspectRevealed(roundId, id)`, `suspectCommit(roundId, id)`,
+`crowdSentiment(roundId, id)` (DR-107), `previewPayout(player, roundId)`, and
+`getPlayers(roundId)`.
 
-## Stubbed: settle & claim (DR-104)
+## Settlement: parimutuel with a 4% house edge (DR-104)
 
-The economic / payout model — **parimutuel vs house-banked**, the exact scoring
-formula, fee policy, and refund-on-void rules — is **not finalized**. To avoid
-distributing escrowed MNT under an unspecified rule, `settle` and `claim`:
+After all suspects are revealed, the operator calls `settle(roundId)`:
 
-- compile and keep their final signatures (ABI forward-compatibility),
-- are marked `nonReentrant`, and
-- **revert with `"DR-104: payout model not specified"`**.
+- **Distributable pot** = `totalPot * (10000 - 400) / 10000` — a **4%** house edge
+  (`HOUSE_EDGE_BPS`) is skimmed to the operator at settle; the rest goes to winners.
+- **Player weight** = `totalStake * (confidence on CORRECT guesses) / (confidence on ALL guesses)`,
+  where a guess is correct when `isHumanGuess` matches the revealed `isHuman`.
+- `claim(roundId)` pays each winner `distributable * weight / totalWeight` as a
+  `nonReentrant` pull payment (one claim per player). Ties resolve pro-rata automatically.
+- **Nobody correct** (`totalWeight == 0`): the round enters **refund mode** — the house
+  takes nothing and every player reclaims their exact stake via `claim`.
 
-Everything else — lifecycle, suspect registry, stake escrow, and commit/reveal
-verification — is fully implemented and tested.
+Lifecycle, suspect registry, stake escrow, and commit/reveal verification are fully
+implemented and covered by the test suite (25 passing).
 
 ## Identity commitment scheme
 
