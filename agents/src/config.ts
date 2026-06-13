@@ -6,9 +6,9 @@
  */
 
 // ── Suspect count ──────────────────────────────────────────────────────────
-// DR-502: team decision pending between 6 (4 bots / 2 humans) and 8 (4/4).
-// Current default: 6 (matches the locked DR-502 decision as of 2026-06-13).
-export const SUSPECT_COUNT = 6;
+// DR-502 (locked 2026-06-13): 8 suspects — 4 bots (suspects 1-4) / 4 humans
+// (suspects 5-8). Matches the frontend mock; bots come from BOT_COUNT below.
+export const SUSPECT_COUNT = 8;
 
 /** Suspect IDs are 1-indexed up to SUSPECT_COUNT. */
 export const SUSPECT_IDS: number[] = Array.from(

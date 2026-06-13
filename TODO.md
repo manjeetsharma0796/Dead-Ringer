@@ -305,7 +305,7 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 - OS: any
 - Scope: web
 - Acceptance: `mockData.ts` with 6 suspects, streaming fake trades, round countdown — frontend never waits on contracts or backend.
-- Notes: lives on `main` (under `web/`) as `web/src/lib/mock.ts` + `suspects.ts` + `store.tsx` (deterministic seeded set, ticking trades). ⚠️ Ships **8 suspects (4 bots / 4 humans)** — DR-502's locked decision says **6 (4 bots / 2 humans)**. Reconcile one way or the other before integration.
+- Notes: lives on `main` (under `web/`) as `web/src/lib/mock.ts` + `suspects.ts` + `store.tsx` (deterministic seeded set, ticking trades). ✅ Reconciled: DR-502 ratified **8 suspects (4 bots / 4 humans)** to match this mock — no change needed here.
 
 ### DR-304 — Dossier card (the hero component)
 - Status: in-progress @Mouli 2026-06-12
@@ -525,13 +525,13 @@ Every block also carries `Owner: @handle` — the pre-assigned sprint lane from 
 - Acceptance: the 3-minute story written before building — then the team builds only what the story needs. All hands, hour 0.
 
 ### DR-502 — Final round parameters
-- Status: pending
+- Status: done @Prithwish 2026-06-13
 - Owner: all hands
 - Depends-on: —
 - OS: any
 - Scope: decision
-- Acceptance: decided and recorded — **6 suspects (4 bots, 2 humans), 1 demo round, MNT-denominated stakes**. Change only via editing this task.
-- Notes: ⚠️ the frontend mock (DR-303) currently ships **8 suspects (4 bots / 4 humans)** — either ratify 8/4/4 by editing this task or fix the mock to 6/4/2. Contracts + bots must match whatever is ratified.
+- Acceptance: decided and recorded — **8 suspects (4 bots, 4 humans), 1 demo round, MNT-denominated stakes**. Change only via editing this task.
+- Notes: ✅ ratified **8/4/4** (2026-06-13) — chosen to match the frontend mock (DR-303), which already ships 8, so no web change needed. Agents config flipped: `agents/src/config.ts` `SUSPECT_COUNT = 8` (single source of truth); bots are the leading `BOT_COUNT = 4` suspects, humans are 5–8. Contracts registry must register 8 suspects to match. (Earlier note: was 6/4/2 — superseded.)
 
 ### DR-503 — Demo storyboard
 - Status: done @Jishnu 2026-06-13
@@ -607,6 +607,7 @@ Prep during the buffer hour, use on stage: put two live trade feeds on screen. A
 
 _Done this sprint (blocks flipped in place, newest first):_
 
+- **DR-502** @Prithwish — ratified round params: 8 suspects (4 bots / 4 humans), `SUSPECT_COUNT=8`
 - **DR-203** @Prithwish — bot personalities ×4 (Quant/Degen/Sleeper/PaperHands), 8 unit tests (`agents/`)
 - **DR-401** @Jishnu — root README: monorepo architecture + run instructions (PR #6)
 - **DR-207** @Prithwish — behavioral tells, pure stats over the trade log (`agents/`, PR #5)
