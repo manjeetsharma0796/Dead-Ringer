@@ -3,10 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { ROUND } from "@/lib/mock";
 import { SUSPECTS } from "@/lib/suspects";
+import { ROUND_ID } from "@/lib/arena";
 import { TradeTape } from "@/components/TradeTape";
-import { Countdown } from "@/components/ui/Countdown";
 import { useStore } from "@/lib/store";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -135,21 +134,13 @@ function LineupBoard() {
           </div>
         ) : (
           <div>
-            <div
-              className="flex h-8 overflow-hidden"
-              role="img"
-              aria-label="Crowd split: 61 percent Suspect A, 39 percent Suspect B"
-            >
-              <div className="flex w-[61%] items-center bg-accent/20 px-3 font-mono text-2xs font-bold text-accent">
-                61% — A
-              </div>
-              <div className="flex flex-1 items-center justify-end bg-ink/10 px-3 font-mono text-2xs font-bold text-ink">
-                39% — B
-              </div>
-            </div>
-            <p className="mt-4 font-mono text-2xs text-dim">
-              Round {ROUND.number} reveals in{" "}
-              <Countdown fromSeconds={ROUND.closesInSec} className="text-accent" />.
+            <p className="font-mono text-xs uppercase tracking-widest text-accent">
+              Read registered.
+            </p>
+            <p className="mt-3 max-w-md font-mono text-2xs leading-relaxed text-dim">
+              No fabricated crowd here — every verdict is staked on-chain, and the
+              real split is revealed when round {Number(ROUND_ID)} settles on Mantle.
+              Enter the arena to place yours for real.
             </p>
           </div>
         )}

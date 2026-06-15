@@ -12,6 +12,8 @@ import { DossierCard, type Density } from "@/components/DossierCard";
 import { SuspectDrawer } from "@/components/SuspectDrawer";
 import { TradeTape } from "@/components/TradeTape";
 import { useSuspectsWithStats } from "@/lib/useSuspectStats";
+import { useRound } from "@/lib/useRound";
+import { ROUND_ID } from "@/lib/arena";
 
 type SortKey = "pnl" | "vol" | "uncertain";
 
@@ -33,6 +35,9 @@ export default function ArenaPage() {
   // Overlay real backend stats onto the presentational suspects (DR-313:
   // keeps mock stats on fetch failure). Cosmetic fields stay deterministic.
   const { suspects, status: statsStatus } = useSuspectsWithStats(SUSPECTS);
+
+  // Live round header straight from the Arena contract (falls back to mock).
+  const round = useRound();
 
   useEffect(() => {
     const t = setTimeout(() => setLoading(false), 500);
@@ -68,18 +73,26 @@ export default function ArenaPage() {
       {/* slim round strip — pins under the nav */}
       <div className="sticky top-14 z-20 -mx-4 mb-3 border-b border-line bg-bg px-4 py-2 lg:-mx-8 lg:px-8">
         <div className="flex flex-wrap items-center gap-x-6 gap-y-1 font-mono text-2xs tabular-nums">
-          <span className="type-stamp text-2xs text-ink">Round {ROUND.number}</span>
+          <span className="type-stamp text-2xs text-ink">
+            Round {round.onChain ? Number(ROUND_ID) : ROUND.number}
+          </span>
+          {round.onChain ? (
+            <span className="text-dim">
+              status <span className="font-bold text-accent">{round.state ?? "—"}</span>
+            </span>
+          ) : (
+            <span className="text-dim">
+              closes <Countdown fromSeconds={ROUND.closesInSec} className="font-bold text-accent" />
+            </span>
+          )}
           <span className="text-dim">
-            closes <Countdown fromSeconds={ROUND.closesInSec} className="font-bold text-accent" />
+            pot <span className="font-bold text-ink">{fmtMnt(round.onChain ? round.potMnt : ROUND.pot)}</span>
           </span>
           <span className="text-dim">
-            pot <span className="font-bold text-ink">{fmtMnt(ROUND.pot)}</span>
+            detectives <span className="font-bold text-ink">{round.onChain ? round.detectives : ROUND.detectives}</span>
           </span>
           <span className="text-dim">
-            detectives <span className="font-bold text-ink">{ROUND.detectives}</span>
-          </span>
-          <span className="text-dim">
-            suspects <span className="font-bold text-ink">{suspects.length}</span>
+            suspects <span className="font-bold text-ink">{round.onChain && round.suspectCount ? round.suspectCount : suspects.length}</span>
           </span>
         </div>
       </div>
