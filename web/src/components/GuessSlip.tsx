@@ -4,11 +4,13 @@ import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown, ChevronUp, X } from "lucide-react";
 import { parseEther } from "viem";
-import { useWriteContract } from "wagmi";
+import { useAccount, useSwitchChain, useWriteContract } from "wagmi";
 import { useStore } from "@/lib/store";
+import { useRound } from "@/lib/useRound";
 import { suspectById } from "@/lib/suspects";
 import { fmtMnt, fmtMult } from "@/lib/format";
 import { arenaConfigured } from "@/lib/env";
+import { mantleSepoliaTestnet } from "@/lib/wagmi";
 import {
   ARENA_ABI,
   ARENA_CONTRACT,
@@ -39,6 +41,11 @@ export function GuessSlip() {
   const [stakeRaw, setStakeRaw] = useState(String(stake));
   const [submitting, setSubmitting] = useState(false);
   const { writeContractAsync } = useWriteContract();
+  const { chainId } = useAccount();
+  const { switchChainAsync } = useSwitchChain();
+  const round = useRound();
+  // On a live round, betting is only allowed while the round is Open.
+  const bettingClosed = round.onChain && round.state !== "Open";
 
   const entries = useMemo(() => Object.values(slip), [slip]);
   const count = entries.length;
@@ -60,6 +67,10 @@ export function GuessSlip() {
   };
 
   const onLock = () => {
+    if (bettingClosed) {
+      toast("Betting is closed for this round.", "error");
+      return;
+    }
     if (wallet.status !== "connected") {
       toast("Connect a wallet to lock verdicts", "error");
       return;
@@ -79,8 +90,32 @@ export function GuessSlip() {
     // Id indexing + confidence conversion are centralized in lib/arena.ts.
     void (async () => {
       setSubmitting(true);
-      toast("Submitting verdicts on-chain…", "neutral");
       try {
+        // Make sure the wallet is actually on Mantle Sepolia before signing —
+        // a chain mismatch is the #1 cause of "transaction rejected".
+        if (chainId !== mantleSepoliaTestnet.id) {
+          toast("Switching to Mantle Sepolia…", "neutral");
+          try {
+            await switchChainAsync({ chainId: mantleSepoliaTestnet.id });
+          } catch (sw: unknown) {
+            const m =
+              (sw as { shortMessage?: string; message?: string })?.shortMessage ||
+              (sw as { message?: string })?.message ||
+              "";
+            // -32002: a wallet request is already open. Don't pile on another.
+            if (/-32002|already pending|resource (un)?available|not available/i.test(m)) {
+              toast(
+                "Open MetaMask, approve the pending network switch, then hit Lock again.",
+                "error",
+              );
+              setSubmitting(false);
+              return;
+            }
+            throw sw;
+          }
+        }
+
+        toast("Submitting verdicts on-chain…", "neutral");
         const suspectIds = entries.map((e) => toContractId(e.suspectId));
         const humanGuesses = entries.map((e) => isHumanGuess(e.verdict));
         const confidencesBps = entries.map((e) => toBps(e.confidence));
@@ -91,13 +126,21 @@ export function GuessSlip() {
           functionName: "placeVerdicts",
           args: [ROUND_ID, suspectIds, humanGuesses, confidencesBps],
           value: parseEther(String(stake)),
+          chainId: mantleSepoliaTestnet.id,
         });
 
         lockSlip();
         toast("Verdicts confirmed on-chain.", "accent");
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : "Transaction failed";
-        toast(msg.length > 90 ? "Transaction failed or rejected." : msg, "error");
+        // Surface the REAL reason (viem puts the useful bit in shortMessage).
+        const e = err as { shortMessage?: string; message?: string };
+        const reason = e?.shortMessage || e?.message || "Transaction failed";
+        console.error("placeVerdicts failed:", err);
+        const rejected = /reject|denied|User rejected/i.test(reason);
+        toast(
+          rejected ? "You rejected the transaction." : reason.slice(0, 140),
+          "error",
+        );
         // Do NOT lock on failure.
       } finally {
         setSubmitting(false);
@@ -193,7 +236,14 @@ export function GuessSlip() {
           </span>
         </div>
 
-        {locked ? (
+        {bettingClosed ? (
+          <div className="w-full rounded-sm border border-line bg-bg py-2.5 text-center font-mono text-[11px] text-dim">
+            Betting closed for this round
+            <span className="mt-0.5 block text-[10px] text-line">
+              identities reveal on-chain — see the Reveal page
+            </span>
+          </div>
+        ) : locked ? (
           <>
             <button
               type="button"

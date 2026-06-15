@@ -131,15 +131,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [wallet.status, toast]);
 
   /* ── wrong-chain detection ────────────────────────────────────────────── */
+  // Only WARN here — do NOT auto-switch. The actual switch happens once, at the
+  // moment the user signs (see GuessSlip). Firing switchChain from an effect
+  // races the write's own switch and trips MetaMask's -32002
+  // ("request already pending" / "requested resource not available").
+  const warnedWrongChain = useRef(false);
   useEffect(() => {
     if (!isConnected || chainId === undefined) return;
     if (chainId !== mantleSepoliaTestnet.id) {
-      toast("Wrong network — switching to Mantle Sepolia…", "neutral");
-      switchChainAsync({ chainId: mantleSepoliaTestnet.id }).catch(() => {
-        toast("Switch failed. Please change to Mantle Sepolia manually.", "error");
-      });
+      if (!warnedWrongChain.current) {
+        toast("Wrong network — you'll be asked to switch to Mantle Sepolia when you bet.", "neutral");
+        warnedWrongChain.current = true;
+      }
+    } else {
+      warnedWrongChain.current = false;
     }
-  }, [isConnected, chainId, switchChainAsync, toast]);
+  }, [isConnected, chainId, toast]);
 
   /* ── slip, stake, lock ───────────────────────────────────────────────── */
   const [slip, setSlip] = useState<Record<number, SlipEntry>>({});

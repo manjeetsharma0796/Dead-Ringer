@@ -3,18 +3,27 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
-import { Check, Download, X } from "lucide-react";
+import { Check, Download, Lock, X } from "lucide-react";
 import { formatEther } from "viem";
 import { useWriteContract } from "wagmi";
 import { SUSPECTS } from "@/lib/suspects";
 import { useStore } from "@/lib/store";
 import { fmtMnt } from "@/lib/format";
 import { useMounted } from "@/lib/useMounted";
-import { Skeleton } from "@/components/ui/Skeleton";
 import { useReveal } from "@/lib/useReveal";
+import { useRound } from "@/lib/useRound";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { ARENA_ABI, ARENA_CONTRACT, ROUND_ID } from "@/lib/arena";
 
 const STAGGER = 0.6;
+
+/** Header sub-label per phase. */
+const PHASE_LABEL: Record<string, string> = {
+  Open: "Live",
+  Locked: "Sealed",
+  Revealed: "Declassified",
+  Settled: "Closed",
+};
 
 export default function RevealPage() {
   const mounted = useMounted();
@@ -24,42 +33,49 @@ export default function RevealPage() {
   const [claimed, setClaimed] = useState(false);
   const [claiming, setClaiming] = useState(false);
 
-  // On-chain reveal truth + slip + payout. Falls back to mock when no contract.
+  // On-chain round phase + reveal truth + slip + payout. Falls back to mock
+  // ONLY when no contract is configured.
+  const round = useRound();
   const reveal = useReveal(SUSPECTS);
   const { writeContractAsync } = useWriteContract();
   const onChain = reveal.onChain;
-  const onChainLoading = onChain && reveal.loading;
+  const onChainLoading = onChain && (reveal.loading || round.loading);
+
+  // THE GATE: on a live round, identities stay sealed until the chain reveals.
+  // In pure-mock mode (no contract) we keep the original demo ceremony.
+  const identitiesVisible = round.state === "Revealed" || round.state === "Settled";
+  const sealed = onChain ? !identitiesVisible : false;
+  const settled = round.state === "Settled";
 
   const results = useMemo(
     () =>
       SUSPECTS.map((s) => {
-        // Ground truth: on-chain reveal when configured, mock isBot otherwise.
         const truthRow = reveal.truth[s.id];
-        const isBot = onChain
-          ? truthRow?.revealed
+        // Ground truth is only known once revealed. `null` => still sealed.
+        const isBot: boolean | null = onChain
+          ? identitiesVisible && truthRow?.revealed
             ? !truthRow.isHuman
-            : s.isBot // not yet revealed → fall back to mock for display
+            : null
           : s.isBot;
 
-        // Player's verdict: on-chain slip when available, else local store slip.
-        const verdict = onChain
-          ? reveal.slipVerdicts[s.id]
-          : slip[s.id]?.verdict;
+        // Player's verdict: on-chain slip when connected, else local store slip.
+        const verdict = onChain ? reveal.slipVerdicts[s.id] : slip[s.id]?.verdict;
         const entry = onChain
           ? verdict
             ? slip[s.id] ?? { suspectId: s.id, verdict, confidence: 0, multiplier: 1 }
             : undefined
           : slip[s.id];
 
-        const correct = verdict ? (verdict === "bot") === isBot : null;
+        const correct =
+          verdict && isBot !== null ? (verdict === "bot") === isBot : null;
         return { suspect: s, entry, correct, isBot };
       }),
-    [slip, reveal.truth, reveal.slipVerdicts, onChain],
+    [slip, reveal.truth, reveal.slipVerdicts, onChain, round.state],
   );
 
   const called = results.filter((r) => r.entry);
   const correct = called.filter((r) => r.correct);
-  const perfect = called.length > 0 && correct.length === called.length;
+  const perfect = !sealed && called.length > 0 && correct.length === called.length;
   const per = called.length > 0 ? stake / called.length : 0;
   // Winnings: on-chain previewPayout (wei → MNT) when configured, else mock math.
   const mockWinnings = Math.round(
@@ -104,6 +120,8 @@ export default function RevealPage() {
     return () => clearTimeout(t);
   }, [mounted, perfect, reduce, totalDelay]);
 
+  const phaseLabel = onChain ? PHASE_LABEL[round.state ?? ""] ?? "Closed" : "Closed";
+
   return (
     <div className="mx-auto max-w-5xl">
       {/* perfect-score flash — one frame of accent, no confetti */}
@@ -113,9 +131,17 @@ export default function RevealPage() {
 
       <header className="mb-8">
         <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-accent">
-          Round 7 / Closed
+          Round {ROUND_ID.toString()} / {phaseLabel}
         </span>
-        <h1 className="type-display mt-3 text-4xl text-ink md:text-6xl">Declassifying…</h1>
+        <h1 className="type-display mt-3 text-4xl text-ink md:text-6xl">
+          {sealed ? "Sealed." : "Declassifying…"}
+        </h1>
+        {sealed && (
+          <p className="mt-3 max-w-xl font-mono text-xs leading-relaxed text-dim">
+            Identities are committed on-chain and stay sealed until betting closes
+            and the operator reveals. No peeking — that&apos;s the whole point.
+          </p>
+        )}
       </header>
 
       {onChainLoading && (
@@ -136,49 +162,70 @@ export default function RevealPage() {
             key={suspect.id}
             initial={reduce ? false : { opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25, delay: reduce ? 0 : i * STAGGER, ease: "easeOut" }}
+            transition={{ duration: 0.25, delay: reduce ? 0 : (sealed ? 0 : i * STAGGER), ease: "easeOut" }}
             className="relative rounded-md border border-line bg-surface p-3"
           >
             <div className="type-stamp mb-3 text-2xs text-dim">{suspect.codename}</div>
             <div className="mb-1 font-mono text-2xs text-dim">“{suspect.alias}”</div>
 
-            {/* redaction bar tears away, identity stamp beneath */}
+            {/* identity slot — sealed bar stays put until the chain reveals */}
             <div className="relative mt-2 h-10">
-              <div
-                className={`font-display absolute inset-0 flex items-center justify-center border-2 text-2xl ${
-                  isBot ? "border-bot text-bot" : "border-human text-human"
-                } ${reduce ? "" : "-rotate-2"}`}
-              >
-                {isBot ? "BOT" : "HUMAN"}
-              </div>
-              <motion.div
-                aria-hidden="true"
-                className="redaction absolute inset-0"
-                initial={reduce ? { scaleX: 0 } : { scaleX: 1 }}
-                animate={{ scaleX: 0 }}
-                style={{ originX: 1 }}
-                transition={{ duration: 0.35, delay: reduce ? 0 : i * STAGGER + 0.2, ease: "easeOut" }}
-              />
+              {sealed ? (
+                <div className="absolute inset-0 flex items-center justify-center gap-1.5 border-2 border-line bg-raised font-mono text-2xs uppercase tracking-widest text-dim">
+                  <Lock size={12} strokeWidth={2.5} aria-hidden="true" />
+                  Sealed
+                </div>
+              ) : isBot === null ? (
+                // Revealed globally, but this suspect's truth hasn't loaded yet —
+                // show a pending state rather than mislabeling it.
+                <div className="absolute inset-0 flex animate-pulse items-center justify-center border-2 border-line bg-raised font-mono text-2xs uppercase tracking-widest text-dim">
+                  reading…
+                </div>
+              ) : (
+                <>
+                  <div
+                    className={`font-display absolute inset-0 flex items-center justify-center border-2 text-2xl ${
+                      isBot ? "border-bot text-bot" : "border-human text-human"
+                    } ${reduce ? "" : "-rotate-2"}`}
+                  >
+                    {isBot ? "BOT" : "HUMAN"}
+                  </div>
+                  <motion.div
+                    aria-hidden="true"
+                    className="redaction absolute inset-0"
+                    initial={reduce ? { scaleX: 0 } : { scaleX: 1 }}
+                    animate={{ scaleX: 0 }}
+                    style={{ originX: 1 }}
+                    transition={{ duration: 0.35, delay: reduce ? 0 : i * STAGGER + 0.2, ease: "easeOut" }}
+                  />
+                </>
+              )}
             </div>
 
             {/* your call */}
             <motion.div
               initial={reduce ? false : { opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ duration: 0.2, delay: reduce ? 0 : i * STAGGER + 0.5 }}
+              transition={{ duration: 0.2, delay: reduce ? 0 : (sealed ? 0.1 : i * STAGGER + 0.5) }}
               className="mt-3 flex items-center gap-1.5 border-t border-line pt-2 font-mono text-2xs"
             >
               {entry ? (
-                <>
-                  {correct ? (
-                    <Check size={12} strokeWidth={3} className="text-accent" aria-hidden="true" />
-                  ) : (
-                    <X size={12} strokeWidth={3} className="text-loss" aria-hidden="true" />
-                  )}
-                  <span className={correct ? "text-accent" : "text-loss"}>
-                    you said {entry.verdict.toUpperCase()}
+                sealed ? (
+                  <span className="text-dim">
+                    you called <span className="text-ink">{entry.verdict.toUpperCase()}</span>
                   </span>
-                </>
+                ) : (
+                  <>
+                    {correct ? (
+                      <Check size={12} strokeWidth={3} className="text-accent" aria-hidden="true" />
+                    ) : (
+                      <X size={12} strokeWidth={3} className="text-loss" aria-hidden="true" />
+                    )}
+                    <span className={correct ? "text-accent" : "text-loss"}>
+                      you said {entry.verdict.toUpperCase()}
+                    </span>
+                  </>
+                )
               ) : (
                 <span className="text-dim">no call</span>
               )}
@@ -192,16 +239,33 @@ export default function RevealPage() {
         aria-label="Your score"
         initial={reduce ? false : { opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: reduce ? 0 : totalDelay, ease: "easeOut" }}
+        transition={{ duration: 0.3, delay: reduce ? 0 : (sealed ? 0.2 : totalDelay), ease: "easeOut" }}
         className="mt-10 rounded-md border border-line bg-surface p-6 md:p-8"
       >
-        {called.length === 0 ? (
+        {sealed ? (
+          <div className="flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 className="type-display text-2xl text-ink">
+                {round.state === "Locked" ? "Betting closed — awaiting reveal." : "Round still live."}
+              </h2>
+              <p className="mt-2 font-mono text-2xs text-dim">
+                {called.length > 0
+                  ? `${called.length} call${called.length === 1 ? "" : "s"} locked. Results appear here the moment the case is declassified.`
+                  : "Make your calls in the arena before betting closes."}
+              </p>
+            </div>
+            <Link
+              href="/arena"
+              className="bg-accent px-5 py-2.5 font-mono text-xs uppercase tracking-widest text-black transition-opacity duration-150 hover:opacity-90"
+            >
+              {round.state === "Open" ? "Enter the arena" : "Back to arena"}
+            </Link>
+          </div>
+        ) : called.length === 0 ? (
           <div className="flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <h2 className="type-display text-2xl text-ink">You sat this one out.</h2>
-              <p className="mt-2 font-mono text-2xs text-dim">
-                No verdicts this round.
-              </p>
+              <p className="mt-2 font-mono text-2xs text-dim">No verdicts this round.</p>
             </div>
             <Link
               href="/arena"
@@ -226,20 +290,27 @@ export default function RevealPage() {
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
-              {onChain && (
+              {onChain && settled && (
                 <button
                   type="button"
                   onClick={onClaim}
                   disabled={claiming || claimed || reveal.payoutWei === BigInt(0)}
                   className="flex cursor-pointer items-center gap-2 border border-accent bg-transparent px-5 py-2.5 font-mono text-xs uppercase tracking-widest text-accent transition-opacity duration-150 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  {claimed ? "Claimed" : claiming ? "Claiming…" : "Claim winnings"}
+                  {claimed
+                    ? "Claimed"
+                    : claiming
+                      ? "Claiming…"
+                      : reveal.payoutWei === BigInt(0)
+                        ? "Nothing to claim"
+                        : "Claim winnings"}
                 </button>
               )}
               <button
                 type="button"
                 onClick={() => {
                   downloadShareCard({
+                    round: Number(ROUND_ID),
                     score: `${correct.length}/${called.length}`,
                     percentile,
                     net: winnings,
@@ -272,6 +343,7 @@ export default function RevealPage() {
 
 /* Canvas share card: dark, codename grid, score. 1200×630. */
 function downloadShareCard(data: {
+  round: number;
   score: string;
   percentile: number;
   net: number;
@@ -308,7 +380,7 @@ function downloadShareCard(data: {
   ctx.fillText("DEAD RINGER", 102, 86);
   ctx.fillStyle = DIM;
   ctx.font = `500 22px ${mono}`;
-  ctx.fillText("ROUND 7 — CASE CLOSED", 64, 140);
+  ctx.fillText(`ROUND ${data.round} — CASE CLOSED`, 64, 140);
 
   ctx.fillStyle = INK;
   ctx.font = `400 110px ${bebas}`;
@@ -343,7 +415,7 @@ function downloadShareCard(data: {
   ctx.fillText("CAN YOU SPOT THE MACHINE? · BUILT ON MANTLE", 64, 580);
 
   const a = document.createElement("a");
-  a.download = "dead-ringer-round-7.png";
+  a.download = `dead-ringer-round-${data.round}.png`;
   a.href = c.toDataURL("image/png");
   a.click();
 }
